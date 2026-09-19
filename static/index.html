@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI助手</title>
+</head>
+<body>
+<h1> 欢迎来到AI助手</h1>
+<p>网页加载成功</p>
+<input id="msg" type="text">
+<button id="send">发送</button>
+<div id="output"></div>
+<script>
+    document.getElementById("send").disabled = true
+    document.getElementById("msg").addEventListener("input", () => {
+        if (document.getElementById("msg").value.trim().length > 0) {
+            document.getElementById("send").disabled = false
+        } else {
+            document.getElementById("send").disabled = true
+        }
+    })
+    document.getElementById("send").addEventListener("click", async () => {
+        const data = document.getElementById("msg").value
+        document.getElementById("msg").value = ""
+        document.getElementById("send").disabled = true
+        const p1 = document.createElement("p")
+        p1.innerText = "你: " + data
+        document.getElementById("output").appendChild(p1)
+
+        const loading = document.createElement("p")
+        loading.innerText = "AI: 思考中..."
+        document.getElementById("output").appendChild(loading)
+
+        try {
+            const r = await fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({message: data, session: "session2"})
+            })
+            const result = await r.json()
+            if (!r.ok) {
+                let errMsg = r.status
+                if (typeof result.detail === "string") {
+                    errMsg = result.detail
+                }
+                loading.innerText = "AI: 出错了 - " + errMsg
+            } else {
+                loading.innerText = "AI: " + result["reply"]
+            }
+        } catch (e) {
+            loading.innerText = "AI: 网络错误"
+        }
+    })
+
+</script>
+</body>
+
+</html>
