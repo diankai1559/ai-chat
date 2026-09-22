@@ -74,7 +74,7 @@ def main():
         if assistant_message is None:
             messages.pop()
             continue
-        print("助手:", assistant_message)
+        print("AI:", assistant_message)
         messages.append({"role": "assistant", "content": assistant_message})
         m.save_messages()
 if __name__ == "__main__":

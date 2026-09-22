@@ -1,60 +1,448 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI助手</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 助手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            color: #e6e6e6;
+            background: #1a1a1a;
+        }
+
+        /* 整个页面：左右两栏 */
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ---------- 侧边栏 ---------- */
+        .sidebar {
+            width: 240px;
+            flex-shrink: 0;
+            background: #202020;
+            border-right: 1px solid #3a3a3a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        #new-chat {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            background: #2b2b2b;
+            color: #e6e6e6;
+            cursor: pointer;
+        }
+
+        #new-chat:hover {
+            background: #383838;
+        }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            margin: 0;
+            padding: 8px;
+        }
+
+        .session-item {
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-item:hover {
+            background: #2f2f2f;
+        }
+
+        .session-item.active {
+            background: #1f3a5f;
+        }
+
+        /* ---------- 主区域 ---------- */
+        .main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .main h1 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        /* 消息区 / 欢迎页 的共同容器 */
+        #output {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+        }
+
+        /* ---------- 新会话欢迎页 ---------- */
+        .welcome {
+            flex: 1; /* 撑满整个消息区 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* 垂直 + 水平居中 */
+            text-align: center;
+            padding: 24px;
+        }
+
+        .welcome .logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: #3b82f6;
+            color: #fff;
+            font-size: 26px;
+            line-height: 52px;
+            margin-bottom: 18px;
+        }
+
+        .welcome h2 {
+            margin: 0 0 8px;
+            font-size: 26px;
+            font-weight: 600;
+        }
+
+        .welcome p {
+            margin: 0;
+            font-size: 14px;
+            color: #9a9a9a;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 22px;
+            max-width: 520px;
+        }
+
+        .suggestion {
+            padding: 8px 14px;
+            font-size: 13px;
+            color: #cfcfcf;
+            background: #2b2b2b;
+            border: 1px solid #3a3a3a;
+            border-radius: 999px;
+            cursor: pointer;
+        }
+
+        .suggestion:hover {
+            background: #383838;
+        }
+
+        /* ---------- 消息列表 ---------- */
+        .messages {
+            flex: 1;
+        }
+
+        .messages p {
+            margin: 0 0 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ---------- 输入栏 ---------- */
+        .input-bar {
+            display: flex;
+            gap: 8px;
+        }
+
+        #msg {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            background: #2b2b2b;
+            color: #e6e6e6;
+        }
+
+        #msg::placeholder {
+            color: #888;
+        }
+
+        #send {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #3b82f6;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        #send:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
-<h1> 欢迎来到AI助手</h1>
-<p>网页加载成功</p>
-<input id="msg" type="text">
-<button id="send">发送</button>
-<div id="output"></div>
-<script>
-    document.getElementById("send").disabled = true
-    document.getElementById("msg").addEventListener("input", () => {
-        if (document.getElementById("msg").value.trim().length > 0) {
-            document.getElementById("send").disabled = false
-        } else {
-            document.getElementById("send").disabled = true
-        }
-    })
-    document.getElementById("send").addEventListener("click", async () => {
-        const data = document.getElementById("msg").value
-        document.getElementById("msg").value = ""
-        document.getElementById("send").disabled = true
-        const p1 = document.createElement("p")
-        p1.innerText = "你: " + data
-        document.getElementById("output").appendChild(p1)
 
-        const loading = document.createElement("p")
-        loading.innerText = "AI: 思考中..."
-        document.getElementById("output").appendChild(loading)
+<div class="app">
+    <!-- 左侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <button id="new-chat">+ 新建会话</button>
+        </div>
+        <ul class="session-list" id="session-list"></ul>
+    </aside>
+
+    <!-- 右侧主区域 -->
+    <main class="main">
+        <h1>AI 助手</h1>
+
+        <!-- 消息区：欢迎页 与 消息列表 二选一 -->
+        <div id="output">
+            <!-- 新会话欢迎页 -->
+            <section id="welcome" class="welcome">
+                <div class="logo">✦</div>
+                <h2>有什么可以帮到你？</h2>
+                <p>输入你的问题，或者从下面的示例开始</p>
+                <div class="suggestions">
+                    <button class="suggestion" data-prompt="帮我总结下面这段文字：">帮我总结一段文字</button>
+                    <button class="suggestion" data-prompt="解释一下什么是闭包">解释一下什么是闭包</button>
+                    <button class="suggestion" data-prompt="用 Python 写一个简单的爬虫">用 Python 写一个爬虫</button>
+                </div>
+            </section>
+
+            <!-- 消息列表 -->
+            <div id="messages" class="messages" hidden></div>
+        </div>
+
+        <div class="input-bar">
+            <input id="msg" type="text" placeholder="输入消息…">
+            <button id="send" disabled>发送</button>
+        </div>
+    </main>
+</div>
+
+<script>
+    const outputEl = document.getElementById("output");
+    const welcomeEl = document.getElementById("welcome");
+    const messagesEl = document.getElementById("messages");
+    const listEl = document.getElementById("session-list");
+    const msgInput = document.getElementById("msg");
+    const sendBtn = document.getElementById("send");
+
+    let currentSession = null;
+
+    /* ==================== 视图切换 ==================== */
+
+    // 显示欢迎页（新会话状态）
+    function showWelcome() {
+        currentSession = null;
+        messagesEl.innerHTML = "";
+        messagesEl.hidden = true;
+        welcomeEl.hidden = false;
+        outputEl.scrollTop = 0;
+        document.querySelectorAll(".session-item")
+            .forEach(el => el.classList.remove("active"));
+    }
+
+    // 显示消息列表（已有会话状态）
+    function showMessages() {
+        welcomeEl.hidden = true;
+        messagesEl.hidden = false;
+        msgInput.focus();
+    }
+
+    // 往消息区追加一条消息
+    function addMessage(role, text) {
+        const p = document.createElement("p");
+        p.className = "msg " + role;
+        p.textContent = (role === "user" ? "你: " : "AI: ") + text;
+        messagesEl.appendChild(p);
+        outputEl.scrollTop = outputEl.scrollHeight;
+        return p;
+    }
+
+    // 新建会话 = 回到欢迎页
+    function createSession() {
+        showWelcome();
+        msgInput.value = "";
+        updateSendState();
+        msgInput.focus();
+    }
+
+    /* ==================== 后端接口 ==================== */
+
+    async function loadSessions() {
+        const r = await fetch("/sessions");
+        const data = await r.json();
+        return data.sessions;
+    }
+
+    async function loadHistory(name) {
+        const r = await fetch("/history", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({session: name})
+        });
+        const data = await r.json();
+        return data.history;
+    }
+
+    /* ==================== 会话列表 ==================== */
+
+    async function refreshSessions() {
+        let sessions = [];
+        try {
+            sessions = await loadSessions();
+        } catch (e) {
+            console.error("加载会话列表失败", e);
+            return;
+        }
+
+        listEl.innerHTML = "";
+        for (const name of sessions) {
+            const li = document.createElement("li");
+            li.className = "session-item";
+            li.textContent = name;
+            if (name === currentSession) li.classList.add("active");
+            li.addEventListener("click", () => openSession(name, li));
+            listEl.appendChild(li);
+        }
+    }
+
+    async function openSession(name, li) {
+        document.querySelectorAll(".session-item")
+            .forEach(el => el.classList.remove("active"));
+        if (li) li.classList.add("active");
+
+        currentSession = name;
+        showMessages();
+        messagesEl.innerHTML = "";
+
+        try {
+            const history = await loadHistory(name);
+            for (const item of history) {
+                addMessage(item.role === "user" ? "user" : "ai", item.content);
+            }
+        } catch (e) {
+            addMessage("ai", "历史记录加载失败");
+        }
+    }
+
+    /* ==================== 输入框状态 ==================== */
+
+    function updateSendState() {
+        sendBtn.disabled = msgInput.value.trim().length === 0;
+    }
+
+    msgInput.addEventListener("input", updateSendState);
+    msgInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey && !sendBtn.disabled) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    });
+
+    // 示例问题 → 填入输入框
+    document.querySelectorAll(".suggestion").forEach(btn => {
+        btn.addEventListener("click", () => {
+            msgInput.value = btn.dataset.prompt || btn.textContent;
+            updateSendState();
+            msgInput.focus();
+        });
+    });
+
+    /* ==================== 发送消息 ==================== */
+
+    sendBtn.addEventListener("click", async () => {
+        const text = msgInput.value.trim();
+        if (!text) return;
+
+        msgInput.value = "";
+        updateSendState();
+
+        // 关键：从欢迎页切到消息列表
+        showMessages();
+
+        addMessage("user", text);
+        const loading = addMessage("ai", "思考中...");
 
         try {
             const r = await fetch("/chat", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({message: data, session: "session2"})
-            })
-            const result = await r.json()
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({message: text, session: currentSession})
+            });
+            const result = await r.json();
+
             if (!r.ok) {
-                let errMsg = r.status
-                if (typeof result.detail === "string") {
-                    errMsg = result.detail
-                }
-                loading.innerText = "AI: 出错了 - " + errMsg
+                const errMsg = typeof result.detail === "string" ? result.detail : r.status;
+                loading.textContent = "AI: 出错了 - " + errMsg;
             } else {
-                loading.innerText = "AI: " + result["reply"]
+                loading.textContent = "AI: " + (result.reply ?? "");
+
+                // 如果后端在新建会话时返回了会话名，就记下来并刷新侧边栏
+                if (result.session) currentSession = result.session;
+                await refreshSessions();
             }
         } catch (e) {
-            loading.innerText = "AI: 网络错误"
+            loading.textContent = "AI: 网络错误";
         }
-    })
+    });
 
+    /* ==================== 新建会话按钮 ==================== */
+
+    document.getElementById("new-chat")
+        .addEventListener("click", () => createSession());
+
+    /* ==================== 初始化 ==================== */
+
+    async function init() {
+        createSession();      // 打开页面先进入新建会话页
+        await refreshSessions();
+    }
+
+    init();
 </script>
 </body>
-
 </html>
