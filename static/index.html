@@ -5,13 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI 助手</title>
     <style>
-        * {
-            box-sizing: border-box;
+        :root {
+            --bg: hsl(48, 45%, 95%);
+            --panel: hsl(48, 38%, 88%);
+            --line: hsl(45, 22%, 76%);
+            --txt: hsl(30, 20%, 22%);
+            --sub: hsl(30, 12%, 42%);
+            --accent: hsl(60, 71%, 63%);
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         html, body {
             height: 100%;
-            margin: 0;
         }
 
         [hidden] {
@@ -19,60 +24,72 @@
         }
 
         body {
-            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-            color: #e6e6e6;
-            background: #1a1a1a;
-        }
-
-        /* 整个页面：左右两栏 */
-        .app {
-            display: flex;
+            font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--txt);
             height: 100vh;
+            display: flex;
+            overflow: hidden;
+            user-select: none;
         }
 
         /* ---------- 侧边栏 ---------- */
-        .sidebar {
-            width: 240px;
-            flex-shrink: 0;
-            background: #202020;
-            border-right: 1px solid #3a3a3a;
+        aside {
+            width: 220px;
+            background: var(--panel);
+            border-right: 1px solid var(--line);
+            padding: 16px 12px;
             display: flex;
             flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
         }
 
-        .sidebar-header {
-            padding: 12px;
-            border-bottom: 1px solid #3a3a3a;
+        .brand {
+            font-weight: 700;
+            font-size: 15px;
+            padding: 6px 8px 14px;
         }
+        .brand span { color: var(--accent); }
 
-        #new-chat {
-            width: 100%;
-            padding: 10px 12px;
-            font-size: 14px;
-            border: 1px solid #4a4a4a;
+        .item {
+            padding: 9px 10px;
             border-radius: 8px;
-            background: #2b2b2b;
-            color: #e6e6e6;
+            color: var(--sub);
+            font-size: 13px;
             cursor: pointer;
         }
+        .item:hover { background: hsl(48, 30%, 82%); color: var(--txt); }
+        .item.active { background: var(--accent); color: hsl(30, 20%, 18%); }
 
-        #new-chat:hover {
-            background: #383838;
+        .session-divider {
+            height: 1px;
+            background: var(--line);
+            margin: 10px 6px;
+        }
+
+        .session-label {
+            padding: 4px 10px;
+            font-size: 11px;
+            color: var(--sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .session-list {
             flex: 1;
             overflow-y: auto;
             list-style: none;
-            margin: 0;
-            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
 
         .session-item {
-            padding: 10px 12px;
-            margin-bottom: 4px;
+            padding: 8px 10px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
+            color: var(--sub);
             cursor: pointer;
             white-space: nowrap;
             overflow: hidden;
@@ -80,48 +97,54 @@
         }
 
         .session-item:hover {
-            background: #2f2f2f;
+            background: hsl(48, 30%, 82%);
+            color: var(--txt);
         }
 
         .session-item.active {
-            background: #1f3a5f;
+            background: hsl(60, 60%, 75%);
+            color: hsl(30, 20%, 18%);
         }
 
         /* ---------- 主区域 ---------- */
-        .main {
+        main {
             flex: 1;
-            min-width: 0;
             display: flex;
             flex-direction: column;
-            padding: 16px;
+            min-width: 0;
         }
 
-        .main h1 {
-            margin: 0 0 12px;
-            font-size: 18px;
+        header {
+            height: 52px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            font-size: 14px;
+            gap: 10px;
         }
 
-        /* 消息区 / 欢迎页 的共同容器 */
+        .dot { width: 9px; height: 9px; border-radius: 50%; background: #35d07f; }
+        header small { color: var(--sub); margin-left: auto; font-size: 12px; }
+
+        /* 消息区 */
         #output {
             flex: 1;
             min-height: 0;
             overflow-y: auto;
-            border: 1px solid #3a3a3a;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
+            padding: 20px 22px;
             display: flex;
             flex-direction: column;
-            background: #1e1e1e;
+            gap: 12px;
         }
 
         /* ---------- 新会话欢迎页 ---------- */
         .welcome {
-            flex: 1; /* 撑满整个消息区 */
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* 垂直 + 水平居中 */
+            justify-content: center;
             text-align: center;
             padding: 24px;
         }
@@ -130,8 +153,8 @@
             width: 52px;
             height: 52px;
             border-radius: 14px;
-            background: #3b82f6;
-            color: #fff;
+            background: var(--accent);
+            color: hsl(30, 20%, 18%);
             font-size: 26px;
             line-height: 52px;
             margin-bottom: 18px;
@@ -139,14 +162,14 @@
 
         .welcome h2 {
             margin: 0 0 8px;
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 600;
         }
 
         .welcome p {
             margin: 0;
             font-size: 14px;
-            color: #9a9a9a;
+            color: var(--sub);
         }
 
         .suggestions {
@@ -159,83 +182,113 @@
         }
 
         .suggestion {
-            padding: 8px 14px;
+            padding: 8px 16px;
             font-size: 13px;
-            color: #cfcfcf;
-            background: #2b2b2b;
-            border: 1px solid #3a3a3a;
+            color: var(--txt);
+            background: var(--panel);
+            border: 1px solid var(--line);
             border-radius: 999px;
             cursor: pointer;
         }
 
         .suggestion:hover {
-            background: #383838;
+            background: hsl(48, 30%, 82%);
         }
 
         /* ---------- 消息列表 ---------- */
         .messages {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .messages p {
-            margin: 0 0 10px;
-            font-size: 14px;
-            line-height: 1.6;
+        .msg {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            line-height: 1.5;
             white-space: pre-wrap;
             word-break: break-word;
         }
 
+        .msg.user {
+            background: var(--accent);
+            color: hsl(30, 20%, 18%);
+            align-self: flex-end;
+        }
+
+        .msg.ai {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            align-self: flex-start;
+        }
+
         /* ---------- 输入栏 ---------- */
-        .input-bar {
+        .composer {
+            padding: 14px 18px 18px;
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
 
         #msg {
             flex: 1;
-            padding: 10px;
+            background: hsl(48, 50%, 98%);
+            border: 1px solid var(--line);
+            color: var(--txt);
+            border-radius: 10px;
+            padding: 12px 14px;
             font-size: 14px;
-            border: 1px solid #4a4a4a;
-            border-radius: 8px;
-            background: #2b2b2b;
-            color: #e6e6e6;
+            outline: none;
         }
 
-        #msg::placeholder {
-            color: #888;
-        }
+        #msg:focus { border-color: var(--accent); }
+
+        #msg::placeholder { color: var(--sub); }
 
         #send {
-            padding: 10px 20px;
-            font-size: 14px;
+            background: var(--accent);
+            color: hsl(30, 20%, 18%);
             border: none;
-            border-radius: 8px;
-            background: #3b82f6;
-            color: #fff;
+            border-radius: 10px;
+            padding: 0 20px;
+            font-size: 14px;
             cursor: pointer;
+            font-weight: 600;
         }
 
+        #send:hover { filter: brightness(1.1); }
+
         #send:disabled {
-            background: #444;
-            color: #888;
+            background: hsl(48, 25%, 80%);
+            color: var(--sub);
             cursor: not-allowed;
+            filter: none;
         }
     </style>
 </head>
 <body>
 
-<div class="app">
     <!-- 左侧边栏 -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <button id="new-chat">+ 新建会话</button>
-        </div>
+    <aside>
+        <div class="brand">AI<span>助手</span></div>
+        <div class="item active" id="nav-new">新任务</div>
+        <div class="item" id="nav-skill">skill</div>
+        <div class="item" id="nav-config">配置</div>
+
+        <div class="session-divider"></div>
+        <div class="session-label">历史会话</div>
         <ul class="session-list" id="session-list"></ul>
     </aside>
 
     <!-- 右侧主区域 -->
-    <main class="main">
-        <h1>AI 助手</h1>
+    <main>
+        <header>
+            <div class="dot"></div>
+            <div>AI 对话</div>
+            <small id="clock">--</small>
+        </header>
 
         <!-- 消息区：欢迎页 与 消息列表 二选一 -->
         <div id="output">
@@ -255,12 +308,11 @@
             <div id="messages" class="messages" hidden></div>
         </div>
 
-        <div class="input-bar">
-            <input id="msg" type="text" placeholder="输入消息…">
+        <div class="composer">
+            <input id="msg" type="text" placeholder="输入消息，回车发送…" autocomplete="off">
             <button id="send" disabled>发送</button>
         </div>
     </main>
-</div>
 
 <script>
     const outputEl = document.getElementById("output");
@@ -273,6 +325,17 @@
     let currentSession = null;
 
     /* ==================== 视图切换 ==================== */
+
+    function scrollToLatest(loadingEl) {
+        outputEl.scrollTop = outputEl.scrollHeight;
+
+        const outputTop = outputEl.getBoundingClientRect().top;
+        const loadingTop = loadingEl.getBoundingClientRect().top;
+
+        if (loadingTop < outputTop) {
+            outputEl.scrollTop -= (outputTop - loadingTop);
+        }
+    }
 
     // 显示欢迎页（新会话状态）
     function showWelcome() {
@@ -294,9 +357,9 @@
 
     // 往消息区追加一条消息
     function addMessage(role, text) {
-        const p = document.createElement("p");
+        const p = document.createElement("div");
         p.className = "msg " + role;
-        p.textContent = (role === "user" ? "你: " : "AI: ") + text;
+        p.textContent = text;
         messagesEl.appendChild(p);
         outputEl.scrollTop = outputEl.scrollHeight;
         return p;
@@ -309,6 +372,20 @@
         updateSendState();
         msgInput.focus();
     }
+
+    /* ==================== 侧边栏导航 ==================== */
+
+    const navItems = document.querySelectorAll(".item");
+    navItems.forEach(item => {
+        item.addEventListener("click", () => {
+            navItems.forEach(i => i.classList.remove("active"));
+            item.classList.add("active");
+        });
+    });
+
+    document.getElementById("nav-new").addEventListener("click", () => {
+        createSession();
+    });
 
     /* ==================== 后端接口 ==================== */
 
@@ -329,6 +406,24 @@
     }
 
     /* ==================== 会话列表 ==================== */
+
+    // 在列表中插入/更新一个会话项，返回该 li 元素
+    function upsertSessionItem(name) {
+        // 已存在则只更新激活态
+        const existing = Array.from(listEl.children).find(li => li.textContent === name);
+        if (existing) {
+            document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
+            existing.classList.add("active");
+            return existing;
+        }
+        const li = document.createElement("li");
+        li.className = "session-item active";
+        li.textContent = name;
+        document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
+        li.addEventListener("click", () => openSession(name, li));
+        listEl.insertBefore(li, listEl.firstChild);
+        return li;
+    }
 
     async function refreshSessions() {
         let sessions = [];
@@ -354,6 +449,9 @@
         document.querySelectorAll(".session-item")
             .forEach(el => el.classList.remove("active"));
         if (li) li.classList.add("active");
+
+        // 切换侧边栏导航激活态
+        navItems.forEach(i => i.classList.remove("active"));
 
         currentSession = name;
         showMessages();
@@ -403,37 +501,99 @@
 
         // 关键：从欢迎页切到消息列表
         showMessages();
+        scrollToLatest(messagesEl);
 
         addMessage("user", text);
-        const loading = addMessage("ai", "思考中...");
+        const loading = addMessage("ai", "");
+        scrollToLatest(loading);
+
+        // 新会话：立刻在侧边栏插入"新会话"占位
+        let sessionItemEl = null;
+        const isNewChat = currentSession === null;
+        if (isNewChat) {
+            currentSession = "新会话";
+            sessionItemEl = upsertSessionItem("新会话");
+        }
 
         try {
-            const r = await fetch("/chat", {
+            const r = await fetch("/chat/stream", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({message: text, session: currentSession})
             });
-            const result = await r.json();
-
             if (!r.ok) {
+                const result = await r.json();
                 const errMsg = typeof result.detail === "string" ? result.detail : r.status;
-                loading.textContent = "AI: 出错了 - " + errMsg;
-            } else {
-                loading.textContent = "AI: " + (result.reply ?? "");
+                loading.textContent = "出错了 - " + errMsg;
+                return;
+            }
+            const reader = await r.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let full = "";
+            while (true) {
+                const {value, done} = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, {stream: true});
+                const parts = buffer.split("\n\n");
+                buffer = parts.pop();
+                for (const part of parts) {
+                    if (!part.startsWith("data: ")) continue;
+                    const content = part.slice(6);
+                    if (content.startsWith("[START]")) {
+                        currentSession = content.slice(7);
+                        continue
+                    }
+                    if (content === "[DONE]") break;
+                    if (content.startsWith("[ERROR]")) {
+                        loading.textContent = "出错了 - " + content;
+                        return;
+                    }
+                    full += content;
+                    loading.textContent = full;
+                    scrollToLatest(loading);
+                    outputEl.scrollTop = outputEl.scrollHeight;
+                }
+            }
 
-                // 如果后端在新建会话时返回了会话名，就记下来并刷新侧边栏
-                if (result.session) currentSession = result.session;
-                await refreshSessions();
+            // 流结束后再重命名，确保文件已保存到磁盘
+            if (full && isNewChat && sessionItemEl) {
+                try {
+                    const r2 = await fetch("/chat", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({session: currentSession})
+                    });
+                    if (r2.ok) {
+                        const data = await r2.json();
+                        currentSession = data.session;
+                        // 立即更新侧边栏该项的显示名称
+                        sessionItemEl.textContent = data.session;
+                        sessionItemEl.onclick = () => openSession(data.session, sessionItemEl);
+                    }
+                } catch (e) {
+                    console.warn("会话重命名失败", e);
+                }
+            }
+
+            if (full) {
+                await refreshSessions()
             }
         } catch (e) {
-            loading.textContent = "AI: 网络错误";
+            loading.textContent = "网络错误";
         }
     });
 
-    /* ==================== 新建会话按钮 ==================== */
+    /* ==================== 时钟 ==================== */
 
-    document.getElementById("new-chat")
-        .addEventListener("click", () => createSession());
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, "0");
+        const m = String(now.getMinutes()).padStart(2, "0");
+        document.getElementById("clock").textContent = h + ":" + m;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
 
     /* ==================== 初始化 ==================== */
 

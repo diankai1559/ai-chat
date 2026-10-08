@@ -49,3 +49,11 @@ class Messages:
         self.filename = f"sessions/{name}.json"
         self.messages = []
         self.load_messages()
+
+    def rename(self,name):
+        old_path = self.filename
+        new_path = f"sessions/{name}.json"
+
+        if os.path.exists(old_path):
+            os.rename(old_path,new_path)
+        self.filename = new_path

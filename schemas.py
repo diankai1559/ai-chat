@@ -16,10 +16,12 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000)
     session: str | None = Field(default=None, min_length=1, max_length=50)
 
-class ChatResponse(BaseModel):
-    reply: str
-    session: str
-    message_count: int
+class RenameRequest(BaseModel):
+    session: str = Field(..., min_length=1, max_length=50)
+
+class RenameResponse(BaseModel):
+    session: str = Field(..., min_length=1, max_length=50)
+
 
 
 
