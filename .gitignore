@@ -1,6 +1,8 @@
 .env
 __pycache__/
 *.pyc
-sessions/
+*.pyo
+*.db
+data/
 .venv/
 .idea/

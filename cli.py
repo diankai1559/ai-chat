@@ -1,10 +1,11 @@
-from storage import Messages
-from llm import chat
 import os
+
+from app.storage import Messages
+from app.llm import chat
 
 
 def main():
-    m = Messages("sessions/default.json")
+    m = Messages("default")
     m.load_messages()
     while True:
         messages = m.messages
@@ -35,22 +36,24 @@ def main():
                 if not arg:
                     print("用法：/new <会话名称>")
                 else:
-                    path = f"sessions/{arg}.json"
+                    path = arg
                     if os.path.exists(path):
                         print("会话已存在,请用 /switch 切换会话")
                     else:
                         m.switch(arg)
                         print(f"已创建并切换到新会话:{arg}")
 
-            elif cmd == "/sessions":
-                if not os.path.exists("sessions"):
+            elif cmd == "/sessions_old":
+                # TODO: 遗留命令，仍依赖已废弃的 JSON 目录与旧的 m.session_name，
+                #       需整体迁移到 uuid + SQLite（参考 /sessions）
+                if not os.path.exists("sessions_old"):
                     print("会话目录不存在")
                 else:
-                    names = [f[:-5] for f in os.listdir("sessions") if f.endswith(".json")]
+                    names = [f[:-5] for f in os.listdir("sessions_old") if f.endswith(".json")]
                     if names:
                         print("会话列表:")
                         for name in names:
-                            mark = "<-当前" if f"sessions/{name}.json" == m.filename else ""
+                            mark = "<-当前" if name == m.session_name else ""
                             print(f"- {name} {mark}")
                     else:
                         print("当前没有会话")

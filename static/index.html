@@ -11,17 +11,16 @@
             --line: hsl(45, 22%, 76%);
             --txt: hsl(30, 20%, 22%);
             --sub: hsl(30, 12%, 42%);
-            --accent: hsl(60, 71%, 63%);
+            --accent: hsl(48, 50%, 78%);       /* 柔和米黄色 — 高亮态 */
+            --hover: hsl(48, 30%, 82%);
+            --pending: hsl(48, 40%, 91%);       /* 暖米色 — 等待智能命名 */
+            --field: hsl(48, 50%, 98%);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html, body {
-            height: 100%;
-        }
+        html, body { height: 100%; }
 
-        [hidden] {
-            display: none !important;
-        }
+        [hidden] { display: none !important; }
 
         body {
             font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
@@ -35,57 +34,76 @@
 
         /* ---------- 侧边栏 ---------- */
         aside {
-            width: 220px;
+            width: 248px;
+            height: 100vh;
             background: var(--panel);
             border-right: 1px solid var(--line);
-            padding: 16px 12px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .side-top {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
             flex-shrink: 0;
         }
 
-        .brand {
-            font-weight: 700;
-            font-size: 15px;
-            padding: 6px 8px 14px;
-        }
-        .brand span { color: var(--accent); }
-
-        .item {
-            padding: 9px 10px;
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
             border-radius: 8px;
+            background: transparent;
             color: var(--sub);
-            font-size: 13px;
+            font-family: inherit;
+            font-size: 13.5px;
+            text-align: left;
             cursor: pointer;
         }
-        .item:hover { background: hsl(48, 30%, 82%); color: var(--txt); }
-        .item.active { background: var(--accent); color: hsl(30, 20%, 18%); }
+        .nav-item svg { width: 16px; height: 16px; flex: none; }
+        .nav-item:hover { background: var(--hover); color: var(--txt); }
+        .nav-item.active { background: var(--accent); color: hsl(30, 20%, 18%); }
 
-        .session-divider {
-            height: 1px;
-            background: var(--line);
-            margin: 10px 6px;
-        }
-
-        .session-label {
-            padding: 4px 10px;
+        .chats-label {
+            padding: 12px 20px 6px;
             font-size: 11px;
-            color: var(--sub);
-            text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--sub);
+            flex-shrink: 0;
         }
 
         .session-list {
             flex: 1;
+            min-height: 0;
             overflow-y: auto;
             list-style: none;
+            padding: 0 10px 10px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 1px;
+        }
+        /* 主题化细滚动条（只用 webkit 规则，勿与 scrollbar-width 混用） */
+        .session-list::-webkit-scrollbar { width: 6px; }
+        .session-list::-webkit-scrollbar-track { background: transparent; }
+        .session-list::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+        .session-list::-webkit-scrollbar-thumb {
+            background: hsla(45, 22%, 68%, 0.5);
+            border-radius: 999px;
+        }
+        .session-list::-webkit-scrollbar-thumb:hover {
+            background: hsla(45, 25%, 55%, 0.8);
         }
 
         .session-item {
+            flex-shrink: 0;
             padding: 8px 10px;
             border-radius: 8px;
             font-size: 13px;
@@ -94,16 +112,41 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            transition: background-color 0.45s cubic-bezier(.2,.7,.3,1),
+                        color 0.35s ease,
+                        box-shadow 0.45s ease;
         }
-
-        .session-item:hover {
-            background: hsl(48, 30%, 82%);
-            color: var(--txt);
-        }
-
+        .session-item:hover { background: var(--hover); color: var(--txt); }
         .session-item.active {
-            background: hsl(60, 60%, 75%);
+            background: var(--accent);
             color: hsl(30, 20%, 18%);
+            box-shadow: 0 1px 3px hsla(45, 40%, 60%, 0.25);
+        }
+
+        /* 占位态：暖米色素描，等智能命名后柔滑过渡到米黄高亮 */
+        .session-item.pending {
+            background: var(--pending);
+            color: hsl(40, 18%, 38%);
+            box-shadow: inset 0 0 0 1px hsla(45, 30%, 72%, 0.6),
+                        0 1px 6px hsla(48, 42%, 62%, 0.18);
+            animation: pending-glow 2.8s ease-in-out infinite;
+            cursor: default;
+        }
+        @keyframes pending-glow {
+            0%, 100% {
+                box-shadow: inset 0 0 0 1px hsla(45, 30%, 72%, 0.6),
+                            0 1px 6px hsla(48, 42%, 62%, 0.18);
+            }
+            50% {
+                box-shadow: inset 0 0 0 1px hsla(48, 40%, 65%, 0.55),
+                            0 2px 10px hsla(48, 45%, 60%, 0.28);
+            }
+        }
+
+        .side-bottom {
+            padding: 10px;
+            border-top: 1px solid var(--line);
+            flex-shrink: 0;
         }
 
         /* ---------- 主区域 ---------- */
@@ -116,31 +159,30 @@
 
         header {
             height: 52px;
-            border-bottom: 1px solid var(--line);
             display: flex;
             align-items: center;
-            padding: 0 18px;
-            font-size: 14px;
-            gap: 10px;
+            padding: 0 22px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .dot { width: 9px; height: 9px; border-radius: 50%; background: #35d07f; }
-        header small { color: var(--sub); margin-left: auto; font-size: 12px; }
+        #chat-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--txt);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-        /* 消息区 */
         #output {
             flex: 1;
             min-height: 0;
             overflow-y: auto;
-            padding: 20px 22px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
         }
 
         /* ---------- 新会话欢迎页 ---------- */
         .welcome {
-            flex: 1;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -189,77 +231,138 @@
             border: 1px solid var(--line);
             border-radius: 999px;
             cursor: pointer;
+            font-family: inherit;
         }
-
-        .suggestion:hover {
-            background: hsl(48, 30%, 82%);
-        }
+        .suggestion:hover { background: var(--hover); }
 
         /* ---------- 消息列表 ---------- */
         .messages {
-            flex: 1;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 24px 22px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
         }
 
         .msg {
             max-width: 70%;
             padding: 10px 14px;
             border-radius: 12px;
-            font-size: 13.5px;
-            line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.6;
             white-space: pre-wrap;
             word-break: break-word;
         }
 
         .msg.user {
+            align-self: flex-end;
             background: var(--accent);
             color: hsl(30, 20%, 18%);
-            align-self: flex-end;
         }
 
         .msg.ai {
+            align-self: flex-start;
             background: var(--panel);
             border: 1px solid var(--line);
-            align-self: flex-start;
         }
 
-        /* ---------- 输入栏 ---------- */
-        .composer {
-            padding: 14px 18px 18px;
-            display: flex;
-            gap: 10px;
+        /* 等待回复时的三点流动动画 */
+        .msg.typing .dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            height: 1.5em;
+            vertical-align: middle;
+        }
+        .msg.typing .dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--sub);
+            animation: typing-flow 1.2s infinite ease-in-out;
+        }
+        .msg.typing .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .msg.typing .dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing-flow {
+            0%, 60%, 100% { opacity: 0.25; transform: scale(0.75); }
+            30% { opacity: 1; transform: scale(1.3); background: var(--accent); }
+        }
+
+        /* ---------- 输入栏（圆角卡片 + 工具栏） ---------- */
+        .composer { padding: 10px 24px 20px; }
+
+        .composer-inner {
+            max-width: 760px;
+            margin: 0 auto;
+            background: var(--field);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 12px 14px 8px;
         }
 
         #msg {
-            flex: 1;
-            background: hsl(48, 50%, 98%);
-            border: 1px solid var(--line);
-            color: var(--txt);
-            border-radius: 10px;
-            padding: 12px 14px;
-            font-size: 14px;
+            width: 100%;
+            border: none;
             outline: none;
+            resize: none;
+            background: transparent;
+            color: var(--txt);
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 200px;
+            user-select: text;
         }
-
-        #msg:focus { border-color: var(--accent); }
-
         #msg::placeholder { color: var(--sub); }
 
-        #send {
-            background: var(--accent);
-            color: hsl(30, 20%, 18%);
-            border: none;
-            border-radius: 10px;
-            padding: 0 20px;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: 600;
+        .composer-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
         }
 
-        #send:hover { filter: brightness(1.1); }
+        .spacer { flex: 1; }
 
+        .icon-btn {
+            width: 30px;
+            height: 30px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--sub);
+            cursor: pointer;
+        }
+        .icon-btn svg { width: 15px; height: 15px; }
+        .icon-btn:hover { background: var(--hover); color: var(--txt); }
+
+        .chip {
+            font-size: 12px;
+            color: var(--sub);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+
+        #send {
+            width: 32px;
+            height: 32px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            color: hsl(30, 20%, 18%);
+            cursor: pointer;
+        }
+        #send svg { width: 16px; height: 16px; }
+        #send:hover { filter: brightness(1.08); }
         #send:disabled {
             background: hsl(48, 25%, 80%);
             color: var(--sub);
@@ -272,22 +375,40 @@
 
     <!-- 左侧边栏 -->
     <aside>
-        <div class="brand">AI<span>助手</span></div>
-        <div class="item active" id="nav-new">新任务</div>
-        <div class="item" id="nav-skill">skill</div>
-        <div class="item" id="nav-config">配置</div>
+        <div class="side-top">
+            <button class="nav-item" id="nav-new">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg>
+                <span>新对话</span>
+            </button>
+            <button class="nav-item" id="nav-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.2-4.2"/></svg>
+                <span>搜索</span>
+            </button>
+            <button class="nav-item" id="nav-skill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+                <span>技能</span>
+            </button>
+            <button class="nav-item" id="nav-project">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7l8.5-4 8.5 4v10l-8.5 4-8.5-4z"/><path d="M3.5 7l8.5 4 8.5-4M12 11v10"/></svg>
+                <span>项目</span>
+            </button>
+        </div>
 
-        <div class="session-divider"></div>
-        <div class="session-label">历史会话</div>
+        <div class="chats-label">对话</div>
         <ul class="session-list" id="session-list"></ul>
+
+        <div class="side-bottom">
+            <button class="nav-item" id="nav-config">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.2 5.2l1.8 1.8M17 17l1.8 1.8M18.8 5.2L17 7M7 17l-1.8 1.8"/></svg>
+                <span>设置</span>
+            </button>
+        </div>
     </aside>
 
     <!-- 右侧主区域 -->
     <main>
         <header>
-            <div class="dot"></div>
-            <div>AI 对话</div>
-            <small id="clock">--</small>
+            <h1 id="chat-title">新对话</h1>
         </header>
 
         <!-- 消息区：欢迎页 与 消息列表 二选一 -->
@@ -309,8 +430,21 @@
         </div>
 
         <div class="composer">
-            <input id="msg" type="text" placeholder="输入消息，回车发送…" autocomplete="off">
-            <button id="send" disabled>发送</button>
+            <div class="composer-inner">
+                <textarea id="msg" rows="1" placeholder="输入消息，回车发送…" autocomplete="off"></textarea>
+                <div class="composer-bar">
+                    <button class="icon-btn" title="添加附件" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                    <span class="chip">默认权限</span>
+                    <span class="spacer"></span>
+                    <span class="chip">deepseek</span>
+                    <span class="chip">deepseek-v4-flash</span>
+                    <button id="send" disabled title="发送">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>
+                    </button>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -321,8 +455,10 @@
     const listEl = document.getElementById("session-list");
     const msgInput = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
+    const titleEl = document.getElementById("chat-title");
 
-    let currentSession = null;
+    let currentSession = null;      // uuid
+    let currentSessionName = null;  // 显示名
 
     /* ==================== 视图切换 ==================== */
 
@@ -340,6 +476,8 @@
     // 显示欢迎页（新会话状态）
     function showWelcome() {
         currentSession = null;
+        currentSessionName = null;
+        titleEl.textContent = "新对话";
         messagesEl.innerHTML = "";
         messagesEl.hidden = true;
         welcomeEl.hidden = false;
@@ -369,13 +507,14 @@
     function createSession() {
         showWelcome();
         msgInput.value = "";
+        autoGrow();
         updateSendState();
         msgInput.focus();
     }
 
     /* ==================== 侧边栏导航 ==================== */
 
-    const navItems = document.querySelectorAll(".item");
+    const navItems = document.querySelectorAll(".nav-item");
     navItems.forEach(item => {
         item.addEventListener("click", () => {
             navItems.forEach(i => i.classList.remove("active"));
@@ -392,35 +531,30 @@
     async function loadSessions() {
         const r = await fetch("/sessions");
         const data = await r.json();
-        return data.sessions;
+        return data.sessions;  // [{uuid, name}, ...]
     }
 
-    async function loadHistory(name) {
+    async function loadHistory(uuid) {
         const r = await fetch("/history", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({session: name})
+            body: JSON.stringify({session_uuid: uuid})
         });
         const data = await r.json();
-        return data.history;
+        return {history: data.history, name: data.session};
     }
 
     /* ==================== 会话列表 ==================== */
 
-    // 在列表中插入/更新一个会话项，返回该 li 元素
-    function upsertSessionItem(name) {
-        // 已存在则只更新激活态
-        const existing = Array.from(listEl.children).find(li => li.textContent === name);
-        if (existing) {
-            document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
-            existing.classList.add("active");
-            return existing;
-        }
+    // 新会话占位项：先以偏白色高光出现，等智能命名后再变为黄色高光
+    function addPendingSession(uuid) {
+        document.querySelectorAll(".session-item")
+            .forEach(el => el.classList.remove("active"));
         const li = document.createElement("li");
-        li.className = "session-item active";
-        li.textContent = name;
-        document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
-        li.addEventListener("click", () => openSession(name, li));
+        li.className = "session-item pending";
+        li.textContent = "新会话";
+        li.dataset.uuid = uuid;
+        li.addEventListener("click", () => openSession(uuid, "新会话", li));
         listEl.insertBefore(li, listEl.firstChild);
         return li;
     }
@@ -435,30 +569,34 @@
         }
 
         listEl.innerHTML = "";
-        for (const name of sessions) {
+        for (const s of sessions) {
             const li = document.createElement("li");
             li.className = "session-item";
-            li.textContent = name;
-            if (name === currentSession) li.classList.add("active");
-            li.addEventListener("click", () => openSession(name, li));
+            li.textContent = s.name;
+            li.dataset.uuid = s.uuid;
+            if (s.uuid === currentSession) li.classList.add("active");
+            li.addEventListener("click", () => openSession(s.uuid, s.name, li));
             listEl.appendChild(li);
         }
     }
 
-    async function openSession(name, li) {
+    async function openSession(uuid, name, li) {
         document.querySelectorAll(".session-item")
             .forEach(el => el.classList.remove("active"));
         if (li) li.classList.add("active");
 
-        // 切换侧边栏导航激活态
         navItems.forEach(i => i.classList.remove("active"));
 
-        currentSession = name;
+        currentSession = uuid;
+        currentSessionName = name;
+        titleEl.textContent = name;
         showMessages();
         messagesEl.innerHTML = "";
 
         try {
-            const history = await loadHistory(name);
+            const {history, name: serverName} = await loadHistory(uuid);
+            currentSessionName = serverName;
+            titleEl.textContent = serverName;
             for (const item of history) {
                 addMessage(item.role === "user" ? "user" : "ai", item.content);
             }
@@ -469,11 +607,19 @@
 
     /* ==================== 输入框状态 ==================== */
 
+    function autoGrow() {
+        msgInput.style.height = "auto";
+        msgInput.style.height = Math.min(msgInput.scrollHeight, 200) + "px";
+    }
+
     function updateSendState() {
         sendBtn.disabled = msgInput.value.trim().length === 0;
     }
 
-    msgInput.addEventListener("input", updateSendState);
+    msgInput.addEventListener("input", () => {
+        autoGrow();
+        updateSendState();
+    });
     msgInput.addEventListener("keydown", e => {
         if (e.key === "Enter" && !e.shiftKey && !sendBtn.disabled) {
             e.preventDefault();
@@ -485,6 +631,7 @@
     document.querySelectorAll(".suggestion").forEach(btn => {
         btn.addEventListener("click", () => {
             msgInput.value = btn.dataset.prompt || btn.textContent;
+            autoGrow();
             updateSendState();
             msgInput.focus();
         });
@@ -497,34 +644,41 @@
         if (!text) return;
 
         msgInput.value = "";
+        autoGrow();
         updateSendState();
 
-        // 关键：从欢迎页切到消息列表
         showMessages();
         scrollToLatest(messagesEl);
 
         addMessage("user", text);
         const loading = addMessage("ai", "");
+        loading.classList.add("typing");
+        loading.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
         scrollToLatest(loading);
 
-        // 新会话：立刻在侧边栏插入"新会话"占位
-        let sessionItemEl = null;
         const isNewChat = currentSession === null;
-        if (isNewChat) {
-            currentSession = "新会话";
-            sessionItemEl = upsertSessionItem("新会话");
-        }
+        let pendingItem = null;
+        const removePending = () => {
+            if (pendingItem) { pendingItem.remove(); pendingItem = null; }
+        };
 
         try {
+            const body = {message: text};
+            if (currentSession) {
+                body.session_uuid = currentSession;
+            }
+
             const r = await fetch("/chat/stream", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({message: text, session: currentSession})
+                body: JSON.stringify(body)
             });
             if (!r.ok) {
                 const result = await r.json();
                 const errMsg = typeof result.detail === "string" ? result.detail : r.status;
+                loading.classList.remove("typing");
                 loading.textContent = "出错了 - " + errMsg;
+                removePending();
                 return;
             }
             const reader = await r.body.getReader();
@@ -542,13 +696,20 @@
                     const content = part.slice(6);
                     if (content.startsWith("[START]")) {
                         currentSession = content.slice(7);
-                        continue
+                        if (isNewChat && !pendingItem) {
+                            pendingItem = addPendingSession(currentSession);
+                        }
+                        continue;
                     }
                     if (content === "[DONE]") break;
                     if (content.startsWith("[ERROR]")) {
+                        loading.classList.remove("typing");
                         loading.textContent = "出错了 - " + content;
+                        removePending();
                         return;
                     }
+                    if (content === "") continue;
+                    if (full === "") loading.classList.remove("typing");
                     full += content;
                     loading.textContent = full;
                     scrollToLatest(loading);
@@ -556,20 +717,25 @@
                 }
             }
 
-            // 流结束后再重命名，确保文件已保存到磁盘
-            if (full && isNewChat && sessionItemEl) {
+            // 重命名会话（只在新对话且有回复时触发）
+            if (full && isNewChat) {
                 try {
                     const r2 = await fetch("/chat", {
                         method: "POST",
                         headers: {"Content-Type": "application/json"},
-                        body: JSON.stringify({session: currentSession})
+                        body: JSON.stringify({session_uuid: currentSession})
                     });
                     if (r2.ok) {
                         const data = await r2.json();
-                        currentSession = data.session;
-                        // 立即更新侧边栏该项的显示名称
-                        sessionItemEl.textContent = data.session;
-                        sessionItemEl.onclick = () => openSession(data.session, sessionItemEl);
+                        currentSessionName = data.session;
+                        titleEl.textContent = data.session;
+                        // 占位项由偏白色高光切到黄色高光
+                        if (pendingItem) {
+                            pendingItem.textContent = data.session;
+                            pendingItem.classList.remove("pending");
+                            pendingItem.classList.add("active");
+                            pendingItem.onclick = () => openSession(currentSession, data.session, pendingItem);
+                        }
                     }
                 } catch (e) {
                     console.warn("会话重命名失败", e);
@@ -577,28 +743,21 @@
             }
 
             if (full) {
-                await refreshSessions()
+                await refreshSessions();
+            } else {
+                removePending();
             }
         } catch (e) {
+            loading.classList.remove("typing");
             loading.textContent = "网络错误";
+            removePending();
         }
     });
-
-    /* ==================== 时钟 ==================== */
-
-    function updateClock() {
-        const now = new Date();
-        const h = String(now.getHours()).padStart(2, "0");
-        const m = String(now.getMinutes()).padStart(2, "0");
-        document.getElementById("clock").textContent = h + ":" + m;
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
 
     /* ==================== 初始化 ==================== */
 
     async function init() {
-        createSession();      // 打开页面先进入新建会话页
+        createSession();
         await refreshSessions();
     }
 

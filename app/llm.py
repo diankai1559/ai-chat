@@ -1,22 +1,27 @@
 import json
 import os
+
 import requests
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+from .config import ENV_PATH
+
+load_dotenv(ENV_PATH, override=True)
 api_key = os.environ.get("DEEPSEEK_API_KEY")
 url = "https://api.deepseek.com/chat/completions"
 headers = {
     "Authorization": f"Bearer {api_key}",
     "Content-Type": "application/json"
 }
+
+
 def chat(messages):
     body = {
         "model": "deepseek-v4-flash",
         "messages": messages
     }
     try:
-        r = requests.post(url, headers=headers, json=body,timeout=30)
+        r = requests.post(url, headers=headers, json=body, timeout=30)
 
     except requests.exceptions.Timeout:
         print("请求超时")
@@ -28,8 +33,7 @@ def chat(messages):
         print(f"请求出错:{e}")
         return None
     if r.status_code == 200:
-        return r.json()["choices"][0]["message"][("cont"
-                                                  "ent")]
+        return r.json()["choices"][0]["message"]["content"]
     else:
         print(f"API 返回错误：{r.status_code} {r.text}")
         return None
@@ -42,7 +46,7 @@ def chat_stream(messages):
         "stream": True
     }
     try:
-        r = requests.post(url,headers=headers,json=body,timeout=60,stream=True)
+        r = requests.post(url, headers=headers, json=body, timeout=60, stream=True)
 
     except requests.exceptions.Timeout:
         yield "data: [ERROR] 请求超时\n\n"
@@ -70,4 +74,3 @@ def chat_stream(messages):
     else:
         yield f"data: [ERROR] API 返回错误：{r.status_code} {r.text}\n\n"
         return
-
