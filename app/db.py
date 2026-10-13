@@ -19,8 +19,11 @@ class Session(Base):
     __tablename__ = "sessions"
     id = Column(Integer, primary_key=True)
     uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    user_id = Column(ForeignKey("users.id"), nullable=True)
     name = Column(String(50), nullable=False, default="新会话")
     created_at = Column(DateTime, default=datetime.now, nullable=False)
+    summary = Column(Text, default="", nullable=False)
+    summary_until_id = Column(Integer, default=0 , nullable=True)
 
 
 class Message(Base):
@@ -31,5 +34,12 @@ class Message(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
 Base.metadata.create_all(engine)

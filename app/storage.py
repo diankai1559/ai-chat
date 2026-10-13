@@ -1,5 +1,6 @@
 from sqlalchemy import select, delete
-
+from .cache import get_messages,set_messages
+from .llm import summarize
 from .db import SessionLocal, Session, Message
 
 
@@ -34,20 +35,28 @@ class Messages:
     def load_messages(self):
         self.messages = []
         session_id = self._get_or_create_session()
-        try:
-            with SessionLocal() as db:
-                result = db.execute(
-                    select(Message).where(Message.session_id == session_id)
-                )
-                for i in result.scalars().all():
-                    self.messages.append({"role": i.role, "content": i.content})
-        except Exception as e:
-            print(e)
+        result = get_messages(self.session_uuid)
+        if result is not None:
+            self.messages = result
+        else:
+            try:
+                with SessionLocal() as db:
+                    result = db.execute(
+                        select(Message).where(Message.session_id == session_id)
+                    )
+                    for i in result.scalars().all():
+                        if i.role == "system":
+                            continue
+                        self.messages.append({"id": i.id, "role": i.role, "content": i.content})
+                set_messages(self.session_uuid, self.messages)
+            except Exception as e:
+                print(e)
         self.ensure_system()
 
     def ensure_system(self):
         if not self.messages or self.messages[0]["role"] != "system":
             self.messages.insert(0, {
+                "id": None,
                 "role": "system",
                 "content": "你是一个简洁的助手，回答不超过 50 字。"
             })
@@ -73,14 +82,21 @@ class Messages:
                 self.session_uuid = session.uuid
                 session_id = session.id
 
-            db.execute(delete(Message).where(Message.session_id == session_id))
             for i in self.messages:
-                db.add(Message(session_id=session_id, role=i["role"], content=i["content"]))
+                if i["id"] is None:
+                    if i["role"] == "system":
+                        continue
+                    msg = Message(session_id=session_id, role=i["role"], content=i["content"])
+                    db.add(msg)
+                    db.flush()
+                    i["id"] = msg.id
             db.commit()
+            real = [i for i in self.messages if i["role"] != "system"]
+            set_messages(self.session_uuid, real)
 
-    def clear(self):
-        self.messages = self.messages[:1]
-        self.save_messages()
+    # def clear(self):
+    #     self.messages = self.messages[:1]
+    #     self.save_messages()
 
     def set_system(self, content):
         self.ensure_system()
@@ -108,3 +124,62 @@ class Messages:
                 session.name = new_name
                 db.commit()
                 self.name = new_name
+
+    def get_context(self):
+        """返回发给模型的消息列表（只读，绝不触发压缩，保证首字不被阻塞）。"""
+        RETAIN = 6
+        THRESHOLD = 20
+        real_messages = self.messages[1:] if self.messages[0]["role"] == "system" else self.messages
+
+        if len(real_messages) < THRESHOLD:
+            return self.messages
+
+        old_summary = None
+        with SessionLocal() as db:
+            result = db.execute(
+                select(Session).where(Session.uuid == self.session_uuid)
+            ).scalars().one_or_none()
+            if result:
+                old_summary = result.summary
+
+        new_messages = [self.messages[0]]
+        if old_summary:
+            split_index = len(real_messages) - RETAIN
+            new_messages.append({"id": None, "role": "system", "content": "【早前对话摘要】" + old_summary})
+            new_messages += real_messages[split_index:]
+        else:
+            # 尚未压缩：先返回全部避免丢信息，压缩交给回复后的 maybe_summarize 后台执行
+            new_messages += real_messages
+        return new_messages
+
+    def maybe_summarize(self):
+        """回复完成后调用（可在后台线程执行）：上下文超限则无感压缩历史。"""
+        RETAIN = 6
+        THRESHOLD = 20
+        BATCH = 10
+        try:
+            real_messages = self.messages[1:] if self.messages[0]["role"] == "system" else self.messages
+            if len(real_messages) < THRESHOLD:
+                return
+            split_index = len(real_messages) - RETAIN
+            with SessionLocal() as db:
+                result = db.execute(
+                    select(Session).where(Session.uuid == self.session_uuid)
+                ).scalars().one_or_none()
+                if not result:
+                    return
+                last_summarized_id = result.summary_until_id
+                old_summary = result.summary
+                to_summarize = [m for m in real_messages[:split_index] if m["id"] and m["id"] > (last_summarized_id or 0)]
+                if len(to_summarize) < BATCH:
+                    return
+                dialogue_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in to_summarize)
+                new_summary = summarize(old_summary, dialogue_text)
+                if new_summary:
+                    result.summary = new_summary
+                    result.summary_until_id = to_summarize[-1]["id"]
+                    db.commit()
+        except Exception as e:
+            print(f"后台摘要压缩失败: {e}")
+
+

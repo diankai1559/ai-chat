@@ -457,6 +457,8 @@
     const sendBtn = document.getElementById("send");
     const titleEl = document.getElementById("chat-title");
 
+    // currentSession 存会话 uuid（后端生成的唯一标识，用来定位是哪个会话）
+    // currentSessionName 只用于界面显示，二者分工不同
     let currentSession = null;      // uuid
     let currentSessionName = null;  // 显示名
 
@@ -663,6 +665,7 @@
         };
 
         try {
+            // 发给后端的 JSON：新会话只带 message；续聊时再带上 session_uuid
             const body = {message: text};
             if (currentSession) {
                 body.session_uuid = currentSession;
@@ -694,6 +697,8 @@
                 for (const part of parts) {
                     if (!part.startsWith("data: ")) continue;
                     const content = part.slice(6);
+                    // 后端把新会话的 uuid 放在流首帧 [START]<uuid> 里发回来，
+                    // 前端存下它，之后所有请求（history / chat / stream）都带上它
                     if (content.startsWith("[START]")) {
                         currentSession = content.slice(7);
                         if (isNewChat && !pendingItem) {
