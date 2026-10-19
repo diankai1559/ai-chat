@@ -1,28 +1,32 @@
 from sqlalchemy import select, delete
 from .cache import get_messages,set_messages
 from .llm import summarize
-from .db import SessionLocal, Session, Message
+from .db import SessionLocal, Session, Message, User
 
 
 class Messages:
-    def __init__(self, session_uuid=None, name="新会话"):
+    def __init__(self, user_id: int, session_uuid=None, name="新会话"):
         self.session_uuid = session_uuid  # 唯一标识
+        self.user_id = user_id
         self.name = name                   # 显示名
         self.messages = []
         self.id = None                     # DB 中的 Integer 主键
 
-    def _get_or_create_session(self):
+    def get_or_create_session(self):
         """确保会话存在，返回其数据库主键 id。"""
         with SessionLocal() as db:
             s = None
             if self.session_uuid:
                 s = db.execute(
-                    select(Session).where(Session.uuid == self.session_uuid)
+                    select(Session).where(
+                        Session.uuid == self.session_uuid,
+                        Session.user_id == self.user_id,
+                    )
                 ).scalars().one_or_none()
 
             if s is None:
                 # 创建新会话
-                s = Session(name=self.name)
+                s = Session(user_id=self.user_id)
                 db.add(s)
                 db.commit()
                 db.refresh(s)
@@ -34,7 +38,7 @@ class Messages:
 
     def load_messages(self):
         self.messages = []
-        session_id = self._get_or_create_session()
+        session_id = self.get_or_create_session()
         result = get_messages(self.session_uuid)
         if result is not None:
             self.messages = result
@@ -63,7 +67,7 @@ class Messages:
 
     def save_messages(self):
         if self.id is None:
-            session_id = self._get_or_create_session()
+            session_id = self.get_or_create_session()
         else:
             session_id = self.id
 
@@ -74,7 +78,7 @@ class Messages:
 
             if session is None:
                 # session 被删了，重新创建
-                session = Session(name=self.name)
+                session = Session(name=self.name, user_id=self.user_id)
                 db.add(session)
                 db.commit()
                 db.refresh(session)
@@ -109,16 +113,16 @@ class Messages:
     def switch(self, session_uuid):
         self.save_messages()
         self.session_uuid = session_uuid
-        self._get_or_create_session()
+        self.get_or_create_session()
         self.load_messages()
 
     def rename(self, new_name):
         """更新会话显示名"""
         if self.id is None:
-            self._get_or_create_session()
+            self.get_or_create_session()
         with SessionLocal() as db:
             session = db.execute(
-                select(Session).where(Session.id == self.id)
+                select(Session).where(Session.id == self.id, Session.user_id == self.user_id)
             ).scalars().one_or_none()
             if session:
                 session.name = new_name

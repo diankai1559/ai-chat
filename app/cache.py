@@ -1,81 +1,133 @@
 import json
+import threading
 import time
+
 import redis
+from redis.backoff import NoBackoff
+from redis.retry import Retry
+
 from .config import REDIS_HOST, REDIS_PORT
 
+# Redis 只是加速手段，绝不允许拖慢主流程。核心策略：
+#   1) 关闭 redis-py 内置重试（redis 8 默认会重试多次，把 0.5s 超时拖成 ~9s）；
+#   2) 连接/命令超时都很短；
+#   3) 由后台线程负责探活，请求路径只读状态，永不在 Redis 上阻塞。
+_CONNECT_TIMEOUT = 0.5  # 秒，连接 Redis 的超时（本地 0.5s 足够）
+_SOCKET_TIMEOUT = 0.5   # 秒，单条命令超时
+_COOLDOWN = 30.0        # 秒，失败后多久再尝试重连
+_PROBE_INTERVAL = 10.0  # 秒，后台探活线程的循环间隔
+_RETRY = Retry(NoBackoff(), 0)  # 禁用内置重试，超时完全由我们自己控制
+
+# WSL2 的 Redis 经端口转发暴露：localhost 会同时解析到 ::1 与 127.0.0.1，
+# 连接失败时两个地址各超时一次、耗时翻倍，这里统一走 IPv4。
+_HOST = "127.0.0.1" if REDIS_HOST == "localhost" else REDIS_HOST
+
+_lock = threading.Lock()
 _client = None
-_last_fail = 0.0
-_RETRY_INTERVAL = 30.0  # Redis 不可用后，至少间隔这么久才重试连接
+_open_until = 0.0  # 熔断器打开到的时刻（time.monotonic()）
+
+
+def _new_client():
+    return redis.Redis(
+        host=_HOST, port=REDIS_PORT, db=0, decode_responses=True,
+        socket_connect_timeout=_CONNECT_TIMEOUT,
+        socket_timeout=_SOCKET_TIMEOUT,
+        retry=_RETRY, retry_on_error=[],
+    )
+
+
+def _trip(exc):
+    """记录一次失败：丢弃死连接并打开熔断器，冷却期内不再尝试。"""
+    global _client, _open_until
+    with _lock:
+        _client = None
+        _open_until = time.monotonic() + _COOLDOWN
+    print(f"Redis 不可用，缓存/限流降级运行: {exc}")
+
+
+def _ensure_client():
+    """在后台线程里尝试建立/恢复连接，绝不在请求路径调用。"""
+    global _client, _open_until
+    with _lock:
+        if _client is not None or time.monotonic() < _open_until:
+            return
+        try:
+            client = _new_client()
+            client.ping()
+        except redis.RedisError as e:
+            _open_until = time.monotonic() + _COOLDOWN
+            print(f"Redis 不可用，缓存/限流降级运行: {e}")
+            return
+        _client = client
+        _open_until = 0.0
+
+
+def _check_health():
+    """后台探活：没有连接就尝试建立；已有连接就 ping 一下，尽早发现失效。"""
+    client = _client
+    if client is None:
+        _ensure_client()
+        return
+    try:
+        client.ping()
+    except redis.RedisError as e:
+        _trip(e)
+
+
+def _health_loop():
+    while True:
+        _check_health()
+        time.sleep(_PROBE_INTERVAL)
 
 
 def _get_client():
-    """惰性创建 Redis 客户端并探测可用性。
-
-    Redis 不可用时返回 None，调用方据此降级（跳过缓存/放行请求），
-    应用仍可正常启动运行，而不会在导入模块时因连接失败而中断。
-    """
-    global _client, _last_fail
-    if _client is not None:
-        return _client
-    # 刚探测失败过，短时间内不再重试，避免每次请求都阻塞在连接上
-    if time.monotonic() - _last_fail < _RETRY_INTERVAL:
-        return None
-    try:
-        client = redis.Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True,
-            socket_connect_timeout=2, socket_timeout=2,
-        )
-        client.ping()
-        _client = client
-        return _client
-    except redis.RedisError as e:
-        _last_fail = time.monotonic()
-        print(f"Redis 不可用，缓存/限流降级运行: {e}")
-        return None
+    """只读当前客户端；None 表示降级。请求路径下绝不发起连接。"""
+    return _client
 
 
-def get_messages(session_uuid: str) -> list | None:
-    client = _get_client()
+def _call(fn, default):
+    """执行一条 Redis 命令：任何失败都降级返回 default，绝不上抛。"""
+    client = _client
     if client is None:
+        return default
+    try:
+        return fn(client)
+    except redis.RedisError as e:
+        _trip(e)  # 命令失败同样丢弃连接并熔断，避免每次请求都阻塞
+        return default
+
+
+def get_messages(session_uuid):
+    data = _call(lambda c: c.get(f"chat:session:{session_uuid}:messages"), None)
+    if not data:
         return None
     try:
-        data = client.get(f"chat:session:{session_uuid}:messages")
-        return json.loads(data) if data else None
-    except redis.RedisError as e:
-        print(f"Error retrieving messages: {e}")
+        return json.loads(data)
+    except (ValueError, TypeError):
         return None
 
 
-def set_messages(session_uuid: str, message: list, ttl: int = 3600) -> None:
-    client = _get_client()
-    if client is None:
-        return
-    try:
-        client.set(f"chat:session:{session_uuid}:messages", json.dumps(message), ex=ttl)
-    except redis.RedisError as e:
-        print(f"Error setting messages: {e}")
+def set_messages(session_uuid, message, ttl=3600):
+    _call(lambda c: c.set(
+        f"chat:session:{session_uuid}:messages", json.dumps(message), ex=ttl,
+    ), None)
 
 
-def invalidate_messages(session_uuid: str):
-    client = _get_client()
-    if client is None:
-        return
-    try:
-        client.delete(f"chat:session:{session_uuid}:messages")
-    except redis.RedisError as e:
-        print(f"Error invalidating messages: {e}")
+def invalidate_messages(session_uuid):
+    _call(lambda c: c.delete(f"chat:session:{session_uuid}:messages"), None)
 
 
-def check_rate_limit(ip: str, limit: int = 20, window: int = 60) -> bool:
-    client = _get_client()
-    if client is None:
-        return True  # Redis 不可用时放行，避免误伤用户
+def check_rate_limit(ip, limit=20, window=60):
     key = f"limit:ip:{ip}:chat"
-    try:
+
+    def op(client):
         count = client.incr(key)
         if count == 1:
             client.expire(key, window)
         return count <= limit
-    except redis.RedisError as e:
-        print(f"Error checking rate limit: {e}")
-        return True
+
+    return _call(op, True)  # Redis 不可用时放行，避免误伤用户
+
+
+# 启动后台探活线程：Redis 恢复后自动重新启用，请求路径无需等待
+threading.Thread(target=_health_loop, daemon=True, name="redis-health").start()

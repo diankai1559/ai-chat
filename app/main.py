@@ -1,15 +1,15 @@
 import threading
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from starlette.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi.staticfiles import StaticFiles
 
 from .config import STATIC_DIR
-from .db import SessionLocal, Session as SessionModel, User
+from .db import SessionLocal, Session, User
 from .schemas import ChatRequest, HistoryRequest, History, RenameResponse, RenameRequest, RegisterRequest, \
-    RegisterResponse
-from .security import hash_password
+    RegisterResponse, LoginRequest, LoginResponse
+from .security import hash_password,verify_password,create_access_token, get_current_user
 from .llm import chat, chat_stream
 from .storage import Messages
 
@@ -42,9 +42,30 @@ def register(req: RegisterRequest):
     )
 
 
+@app.post("/login", response_model=LoginResponse)
+def login(req: LoginRequest):
+    with SessionLocal() as db:
+        result = db.execute(
+            select(User).where(User.username == req.username)
+        ).scalar_one_or_none()
+        if result is None:
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+        if not verify_password(req.password, result.password_hash):
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+            
+        result_username = result.username
+
+        access_token = create_access_token(result.id)
+    return LoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        username=result_username
+    )
+
+
 @app.post("/history", response_model=History)
-def get_chat_history(req: HistoryRequest):
-    m = Messages(session_uuid=req.session_uuid)
+def get_chat_history(req: HistoryRequest, user: User = Depends(get_current_user)):
+    m = Messages(user_id=user.id,session_uuid=req.session_uuid)
     m.load_messages()
     return History(
         # 只返回前端需要的 role/content，剔除内部用的整数 id，避免类型校验失败
@@ -55,10 +76,10 @@ def get_chat_history(req: HistoryRequest):
 
 
 @app.get("/sessions")
-def list_sessions():
+def list_sessions(user: User = Depends(get_current_user)):
     with SessionLocal() as db:
         sessions = db.execute(
-            select(SessionModel).order_by(SessionModel.created_at.desc())
+            select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc())
         ).scalars().all()
         return {
             "sessions": [
@@ -68,9 +89,9 @@ def list_sessions():
 
 
 @app.post("/chat", response_model=RenameResponse)
-def chat_api(req: RenameRequest):
+def chat_api(req: RenameRequest, user: User = Depends(get_current_user)):
     """智能重命名会话"""
-    m = Messages(session_uuid=req.session_uuid)
+    m = Messages(user_id=user.id,session_uuid=req.session_uuid)
     m.load_messages()
     if len(m.messages) <= 1:
         # 还没发过消息，跳过重命名
@@ -93,10 +114,10 @@ def chat_api(req: RenameRequest):
 
 
 @app.post("/chat/stream")
-def chat_stream_api(req: ChatRequest):
+def chat_stream_api(req: ChatRequest, user: User = Depends(get_current_user)):
     session_uuid = req.session_uuid  # None 表示新会话
 
-    m = Messages(session_uuid=session_uuid)
+    m = Messages(user_id=user.id,session_uuid=session_uuid)
     m.load_messages()
 
     user_message = req.message.strip()
@@ -106,7 +127,7 @@ def chat_stream_api(req: ChatRequest):
 
     # 确保 session 有 uuid
     if not m.session_uuid:
-        m._get_or_create_session()
+        m.messages_uuid = m.get_or_create_session()
 
     current_uuid = m.session_uuid
 
