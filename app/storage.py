@@ -156,7 +156,7 @@ class Messages:
             new_messages += real_messages
         return new_messages
 
-    def maybe_summarize(self):
+    def maybe_summarize(self, api_key=None):
         """回复完成后调用（可在后台线程执行）：上下文超限则无感压缩历史。"""
         RETAIN = 6
         THRESHOLD = 20
@@ -178,7 +178,7 @@ class Messages:
                 if len(to_summarize) < BATCH:
                     return
                 dialogue_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in to_summarize)
-                new_summary = summarize(old_summary, dialogue_text)
+                new_summary = summarize(old_summary, dialogue_text, api_key=api_key)
                 if new_summary:
                     result.summary = new_summary
                     result.summary_until_id = to_summarize[-1]["id"]

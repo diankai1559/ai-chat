@@ -555,6 +555,102 @@
             white-space: nowrap;
         }
 
+        /* API Key 配置入口 */
+        .chip-btn {
+            font-family: inherit;
+            cursor: pointer;
+            background: transparent;
+            transition: background-color .3s ease, color .3s ease;
+        }
+        .chip-btn:hover { background: var(--hover); color: var(--txt); }
+        .chip-btn.configured::after {
+            content: "";
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            margin-left: 6px;
+            border-radius: 50%;
+            background: hsl(48, 55%, 50%);
+            vertical-align: middle;
+        }
+
+        /* ---------- API Key 配置弹窗 ---------- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: hsla(35, 25%, 18%, 0.35);
+            animation: fade-in .25s ease;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--field);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 50px hsla(40, 30%, 40%, 0.25);
+            animation: menu-in .25s cubic-bezier(.2,.7,.3,1);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 4px;
+        }
+
+        .modal-desc {
+            font-size: 12.5px;
+            color: var(--sub);
+            line-height: 1.6;
+            margin: 0 0 18px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 13.5px;
+            cursor: pointer;
+            transition: filter .3s ease, background-color .3s ease, color .3s ease;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: hsl(30, 20%, 18%);
+            border-color: transparent;
+        }
+        .btn-primary:hover { filter: brightness(1.05); }
+        .btn-ghost { background: transparent; color: var(--sub); }
+        .btn-ghost:hover { background: var(--hover); color: var(--txt); }
+        .btn:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
+        .btn-test { margin-right: auto; }
+
+        .modal-status {
+            min-height: 16px;
+            font-size: 12.5px;
+            margin: 0 0 4px;
+        }
+        .modal-status.ok { color: hsl(120, 30%, 38%); }
+        .modal-status.err { color: hsl(10, 42%, 52%); }
+
         #send {
             width: 32px;
             height: 32px;
@@ -619,18 +715,6 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg>
                 <span>新对话</span>
             </button>
-            <button class="nav-item" id="nav-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.2-4.2"/></svg>
-                <span>搜索</span>
-            </button>
-            <button class="nav-item" id="nav-skill">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
-                <span>技能</span>
-            </button>
-            <button class="nav-item" id="nav-project">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7l8.5-4 8.5 4v10l-8.5 4-8.5-4z"/><path d="M3.5 7l8.5 4 8.5-4M12 11v10"/></svg>
-                <span>项目</span>
-            </button>
         </div>
 
         <div class="chats-label">对话</div>
@@ -682,7 +766,7 @@
                     <span class="chip">默认权限</span>
                     <span class="spacer"></span>
                     <span class="chip">deepseek</span>
-                    <span class="chip">deepseek-v4-flash</span>
+                    <button class="chip chip-btn" id="api-key-chip" type="button" title="配置 API Key">API Key</button>
                     <button id="send" disabled title="发送">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>
                     </button>
@@ -691,6 +775,24 @@
         </div>
     </main>
     </div><!-- /#app -->
+
+    <!-- API Key 配置弹窗 -->
+    <div class="modal-overlay" id="api-key-modal" hidden>
+        <div class="modal-card">
+            <h3 class="modal-title">API Key 配置</h3>
+            <p class="modal-desc">填写你的 DeepSeek API Key，保存后对话将使用该 Key 调用模型。未配置时使用服务端默认配置。</p>
+            <div class="field">
+                <label for="api-key-input">API Key</label>
+                <input id="api-key-input" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+            </div>
+            <p class="modal-status" id="api-key-status"></p>
+            <div class="modal-actions">
+                <button class="btn btn-ghost btn-test" id="api-key-test" type="button">测试</button>
+                <button class="btn btn-ghost" id="api-key-cancel" type="button">取消</button>
+                <button class="btn btn-primary" id="api-key-save" type="button">保存</button>
+            </div>
+        </div>
+    </div>
 
 <script>
     /* ==================== 认证 ==================== */
@@ -850,6 +952,84 @@
         if (e.target.closest(".msg, #msg, .field input")) return;
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) sel.removeAllRanges();
+    });
+
+    /* ==================== API Key 配置 ==================== */
+    const API_KEY_STORE = "ai_chat_api_key";
+    let apiKey = localStorage.getItem(API_KEY_STORE) || "";
+
+    const apiKeyChip = document.getElementById("api-key-chip");
+    const apiKeyModal = document.getElementById("api-key-modal");
+    const apiKeyInput = document.getElementById("api-key-input");
+    const apiKeySave = document.getElementById("api-key-save");
+    const apiKeyCancel = document.getElementById("api-key-cancel");
+    const apiKeyTest = document.getElementById("api-key-test");
+    const apiKeyStatus = document.getElementById("api-key-status");
+
+    function apiKeyHeaders() {
+        return apiKey ? {"X-API-Key": apiKey} : {};
+    }
+
+    function refreshApiKeyChip() {
+        apiKeyChip.classList.toggle("configured", !!apiKey);
+    }
+
+    function clearApiKeyStatus() {
+        apiKeyStatus.textContent = "";
+        apiKeyStatus.className = "modal-status";
+    }
+
+    apiKeyChip.addEventListener("click", () => {
+        apiKeyInput.value = apiKey;
+        clearApiKeyStatus();
+        apiKeyModal.hidden = false;
+        setTimeout(() => apiKeyInput.focus(), 0);
+    });
+
+    apiKeyCancel.addEventListener("click", () => { apiKeyModal.hidden = true; });
+    apiKeyModal.addEventListener("click", e => {
+        if (e.target === apiKeyModal) apiKeyModal.hidden = true;
+    });
+
+    apiKeyTest.addEventListener("click", async () => {
+        const value = apiKeyInput.value.trim();
+        if (!value) {
+            apiKeyStatus.textContent = "请先输入 API Key";
+            apiKeyStatus.className = "modal-status err";
+            return;
+        }
+        apiKeyTest.disabled = true;
+        apiKeyStatus.textContent = "测试中…";
+        apiKeyStatus.className = "modal-status";
+        try {
+            const r = await fetch("/api-key/test", {
+                method: "POST",
+                headers: {"X-API-Key": value, ...authHeaders()}
+            });
+            const data = await r.json().catch(() => ({}));
+            const ok = r.ok && data.ok;
+            apiKeyStatus.textContent = data.message || (r.ok ? "连接成功" : "测试失败");
+            apiKeyStatus.className = "modal-status " + (ok ? "ok" : "err");
+        } catch (e) {
+            apiKeyStatus.textContent = "网络错误，请稍后重试";
+            apiKeyStatus.className = "modal-status err";
+        } finally {
+            apiKeyTest.disabled = false;
+        }
+    });
+
+    apiKeySave.addEventListener("click", () => {
+        const value = apiKeyInput.value.trim();
+        if (!value) { apiKeyInput.focus(); return; }
+        apiKey = value;
+        localStorage.setItem(API_KEY_STORE, apiKey);
+        refreshApiKeyChip();
+        apiKeyModal.hidden = true;
+    });
+
+    apiKeyInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); apiKeySave.click(); }
+        if (e.key === "Escape") apiKeyModal.hidden = true;
     });
 
     const outputEl = document.getElementById("output");
@@ -1082,7 +1262,7 @@
 
             const r = await fetch("/chat/stream", {
                 method: "POST",
-                headers: {"Content-Type": "application/json", ...authHeaders()},
+                headers: {"Content-Type": "application/json", ...authHeaders(), ...apiKeyHeaders()},
                 body: JSON.stringify(body)
             });
             if (r.status === 401) {
@@ -1140,7 +1320,7 @@
                 try {
                     const r2 = await fetch("/chat", {
                         method: "POST",
-                        headers: {"Content-Type": "application/json", ...authHeaders()},
+                        headers: {"Content-Type": "application/json", ...authHeaders(), ...apiKeyHeaders()},
                         body: JSON.stringify({session_uuid: currentSession})
                     });
                     if (r2.status === 401) {
@@ -1187,6 +1367,7 @@
     if (authToken) {
         const storedName = localStorage.getItem(USER_KEY);
         if (storedName) userNameEl.textContent = storedName;
+        refreshApiKeyChip();
         hideAuth();
         init();
     } else {

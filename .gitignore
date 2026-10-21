@@ -1,6 +1,7 @@
 .env
 __pycache__/
 *.pyc
+test.py
 *.pyo
 *.db
 data/

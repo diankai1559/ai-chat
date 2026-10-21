@@ -1,5 +1,5 @@
 import threading
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from starlette.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -8,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from .config import STATIC_DIR
 from .db import SessionLocal, Session, User
 from .schemas import ChatRequest, HistoryRequest, History, RenameResponse, RenameRequest, RegisterRequest, \
-    RegisterResponse, LoginRequest, LoginResponse
+    RegisterResponse, LoginRequest, LoginResponse, ApiKeyTestResponse
 from .security import hash_password,verify_password,create_access_token, get_current_user
-from .llm import chat, chat_stream
+from .llm import chat, chat_stream, test_api_key
 from .storage import Messages
 
 app = FastAPI()
@@ -63,6 +63,16 @@ def login(req: LoginRequest):
     )
 
 
+@app.post("/api-key/test", response_model=ApiKeyTestResponse)
+def test_api_key_endpoint(
+    api_key: str | None = Header(default=None, alias="X-API-Key"),
+    user: User = Depends(get_current_user),
+):
+    """用传入的 API Key 打一个极小请求，校验 Key 是否可用。"""
+    ok, message = test_api_key(api_key)
+    return ApiKeyTestResponse(ok=ok, message=message)
+
+
 @app.post("/history", response_model=History)
 def get_chat_history(req: HistoryRequest, user: User = Depends(get_current_user)):
     m = Messages(user_id=user.id,session_uuid=req.session_uuid)
@@ -89,7 +99,7 @@ def list_sessions(user: User = Depends(get_current_user)):
 
 
 @app.post("/chat", response_model=RenameResponse)
-def chat_api(req: RenameRequest, user: User = Depends(get_current_user)):
+def chat_api(req: RenameRequest, api_key: str | None = Header(default=None, alias="X-API-Key"), user: User = Depends(get_current_user)):
     """智能重命名会话"""
     m = Messages(user_id=user.id,session_uuid=req.session_uuid)
     m.load_messages()
@@ -102,7 +112,7 @@ def chat_api(req: RenameRequest, user: User = Depends(get_current_user)):
         m.messages[1]
     ]
     try:
-        new_name = chat(system_prompt).strip().strip('"').strip("'")
+        new_name = chat(system_prompt, api_key=api_key).strip().strip('"').strip("'")
         if len(new_name) > 20:
             new_name = new_name[:20]
         if new_name:
@@ -114,7 +124,7 @@ def chat_api(req: RenameRequest, user: User = Depends(get_current_user)):
 
 
 @app.post("/chat/stream")
-def chat_stream_api(req: ChatRequest, user: User = Depends(get_current_user)):
+def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None, alias="X-API-Key"), user: User = Depends(get_current_user)):
     session_uuid = req.session_uuid  # None 表示新会话
 
     m = Messages(user_id=user.id,session_uuid=session_uuid)
@@ -134,13 +144,12 @@ def chat_stream_api(req: ChatRequest, user: User = Depends(get_current_user)):
     def gen():
         full = ""
         yield f"data: [START]{current_uuid}\n\n"
-        for chunk in chat_stream(m.get_context()):
+        for chunk in chat_stream(m.get_context(), api_key=api_key):
             yield chunk
+            if chunk.startswith("data: [ERROR]"):
+                m.messages.pop()
+                return
             if chunk.startswith("data: ") and chunk != "data: [DONE]\n\n":
-                if chunk.startswith("data: [ERROR]"):
-                    m.messages.pop()
-                    yield chunk
-                    return
                 content = chunk[6:].rstrip("\n")
                 full += content
         if not full:
@@ -151,7 +160,7 @@ def chat_stream_api(req: ChatRequest, user: User = Depends(get_current_user)):
             m.messages.append({"id": None,"role": "assistant", "content": full})
             m.save_messages()
             # 回复流已结束，后台无感压缩超限历史，不阻塞本轮响应
-            threading.Thread(target=m.maybe_summarize, daemon=True).start()
+            threading.Thread(target=lambda: m.maybe_summarize(api_key=api_key), daemon=True).start()
 
 
     return StreamingResponse(gen(), media_type="text/event-stream")

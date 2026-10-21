@@ -43,3 +43,7 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     username: str
+
+class ApiKeyTestResponse(BaseModel):
+    ok: bool
+    message: str
