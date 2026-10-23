@@ -30,3 +30,8 @@ SEGMENT_COUNT = int(os.getenv("SEGMENT_COUNT", "4"))
 DATA_DIR = BASE_DIR / "data"          # SQLite 数据库存放目录
 STATIC_DIR = BASE_DIR / "static"      # 前端静态资源
 DB_PATH = DATA_DIR / "chat.db"        # SQLite 数据库文件
+
+# ---------- 长期记忆（RAG）----------
+RAG_MODEL_DIR = Path(os.getenv("RAG_MODEL_DIR", str(DATA_DIR / "rag" / "models")))
+EMBEDDING_MODEL = os.getenv("RAG_EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
+SEGMENT_RETRIEVE_TOP_K = int(os.getenv("SEGMENT_RETRIEVE_TOP_K", "3"))

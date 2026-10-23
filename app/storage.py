@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select, delete
 from .cache import get_messages,set_messages
 from .llm import summarize
@@ -7,7 +9,8 @@ from .db import SessionLocal, Session, Message, User
 
 
 class Messages:
-    def __init__(self, user_id: int, session_uuid=None, name="新会话", persist=True):
+    def __init__(self, user_id: int, session_uuid=None, name="新会话",
+                 persist=True, mode="summary", memory=None):
         self.session_uuid = session_uuid  # 唯一标识
         self.user_id = user_id
         self.name = name                   # 显示名
@@ -19,6 +22,10 @@ class Messages:
         self.persist = persist
         self.state = EmotionState()
         self._next_id = 1
+        # mode="summary" 是摘要版；mode="rag" 走片段检索 + 常驻画像
+        self.mode = mode
+        self.memory = memory
+        self.now = datetime.now()          # 允许评测时用虚拟时间模拟“隔天”
 
     def get_or_create_session(self):
         """确保会话存在，返回其数据库主键 id。"""
@@ -68,10 +75,11 @@ class Messages:
                 print(e)
         self.ensure_system()
 
-    def ensure_system(self):
+    def ensure_system(self, query: str | None = None):
         """每轮重新渲染 system：人设 + 记忆槽 + 当前情绪状态。
 
-        情绪每轮都会变，不能像以前那样只在首次加载时写一次。
+        摘要模式用滚动摘要；RAG 模式用常驻画像 + 按 query 现场检索的片段。
+        情绪每轮都会变，不能只在首次加载时写一次。
         """
         summary = ""
         if not self.persist:
@@ -86,11 +94,22 @@ class Messages:
 
         self.summary = summary
         state = self.state if not self.persist else load_state(self.user_id)
-        content = build_system_prompt(
-            summary=summary or None,
-            emotion=state.render_emotion(),
-            relationship=state.render_relationship(),
-        )
+
+        if self.mode == "rag" and self.memory is not None:
+            content = build_system_prompt(
+                profile=self.memory.profile,
+                segments=self.memory.search(query or ""),
+                emotion=state.render_emotion(),
+                relationship=state.render_relationship(),
+                now=self.now,
+            )
+        else:
+            content = build_system_prompt(
+                summary=summary or None,
+                emotion=state.render_emotion(),
+                relationship=state.render_relationship(),
+                now=self.now,
+            )
 
         if not self.messages or self.messages[0]["role"] != "system":
             self.messages.insert(0, {"id": None, "role": "system", "content": content})
@@ -184,6 +203,10 @@ class Messages:
 
         if len(real_messages) < THRESHOLD:
             return self.messages
+
+        # RAG 模式的早前内容在片段库里，窗口和摘要版一样只留最近 6 条
+        if self.mode == "rag":
+            return [self.messages[0]] + real_messages[-RETAIN:]
 
         # 摘要尚未生成（后台还没跑完或调用失败）时退回最近 20 条，
         # 不能只发 6 条——否则中间这段信息两头都不在，等于整段失忆。

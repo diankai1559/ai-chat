@@ -24,7 +24,8 @@ from pathlib import Path
 
 from app import usage
 from app.llm import chat
-from app.prompt import PROMPT_VERSION, template_fingerprint
+from app.memory.store import MemoryStore
+from app.prompt import PROMPT_VERSION, build_system_prompt, template_fingerprint
 
 from eval.probe_set import CONSISTENCY_IDS, build_probes
 
@@ -79,8 +80,7 @@ def grade(probe: dict, answer: str) -> tuple[str, str]:
     return "wrong", "未命中期望内容"
 
 
-def ask(base_context: list[dict], question: str, api_key: str) -> str:
-    messages = base_context + [{"role": "user", "content": question}]
+def ask(messages: list[dict], api_key: str) -> str:
     reply = chat(messages, api_key=api_key, temperature=0.0)
     return (reply or "").strip()
 
@@ -98,10 +98,14 @@ def bucket_of(distance: int | None) -> str:
 
 
 def pick_latest_result() -> Path:
-    candidates = sorted(glob.glob(str(RESULT_DIR / "摘要版_对话记录_*.json")))
+    candidates = sorted(
+        glob.glob(str(RESULT_DIR / "摘要版_对话记录_*.json"))
+        + glob.glob(str(RESULT_DIR / "RAG版_对话记录_*.json"))
+    )
     if not candidates:
-        sys.exit("没有找到摘要版对话记录，先跑 eval.run_baseline")
-    return Path(candidates[-1])
+        sys.exit("没有找到对话记录，先跑 eval.run_baseline 或 eval.run_rag")
+    # 按修改时间取最新，避免"22轮"按字典序排在"134轮"后面被误选
+    return Path(max(candidates, key=os.path.getmtime))
 
 
 def main() -> None:
@@ -116,12 +120,40 @@ def main() -> None:
 
     result_path = Path(args.result) if args.result else pick_latest_result()
     payload = json.loads(result_path.read_text(encoding="utf-8"))
-    base_context = [
-        {"role": item["role"], "content": item["content"]}
-        for item in payload["final_context"]
-    ]
+    mode = payload.get("mode", "summary")
 
-    probes = build_probes(payload["turns_total"])
+    if mode == "rag":
+        store = MemoryStore.from_dict(payload["memory"])
+        recent = payload.get("recent_messages", [])
+        emotion_text = payload["state"].get("rendered_emotion", "平静")
+        relation_text = payload["state"].get("rendered_relationship", "认识一段时间的朋友")
+        now_text = payload.get("finished_at")
+    else:
+        store = None
+        base_context = [
+            {"role": item["role"], "content": item["content"]}
+            for item in payload["final_context"]
+        ]
+
+    def build_messages(question: str) -> tuple[list[dict], list[str]]:
+        if mode == "rag":
+            segments = store.search(question, top_k=3)
+            system = build_system_prompt(
+                profile=store.profile,
+                segments=segments,
+                emotion=emotion_text,
+                relationship=relation_text,
+                now=now_text,
+            )
+            return (
+                [{"role": "system", "content": system}] + recent
+                + [{"role": "user", "content": question}],
+                segments,
+            )
+        return base_context + [{"role": "user", "content": question}], []
+
+    total_turns = payload.get("turns_total") or payload.get("turns_done") or 134
+    probes = build_probes(total_turns)
     if args.limit:
         probes = probes[: args.limit]
 
@@ -131,14 +163,15 @@ def main() -> None:
 
     rows: list[dict] = []
     print(
-        f"基于 {result_path.name} 提问 {len(probes)} 条，"
+        f"基于 {result_path.name}（{mode}）提问 {len(probes)} 条，"
         f"{PROMPT_VERSION} / {template_fingerprint()}",
         flush=True,
     )
 
     for index, probe in enumerate(probes, start=1):
+        messages, retrieved = build_messages(probe["ask"])
         try:
-            answer = ask(base_context, probe["ask"], api_key)
+            answer = ask(messages, api_key)
         except Exception as exc:
             print(f"[{index}] 调用失败: {exc}", flush=True)
             answer = ""
@@ -149,6 +182,8 @@ def main() -> None:
             "verdict": verdict,
             "reason": reason,
         }
+        if mode == "rag":
+            row["retrieved"] = retrieved
         rows.append(row)
         if index % 10 == 0 or index == len(probes):
             print(f"  {index}/{len(probes)}", flush=True)
@@ -161,7 +196,8 @@ def main() -> None:
         first = by_id.get(fact_id)
         if not first:
             continue
-        second_answer = ask(base_context, first["ask"], api_key)
+        second_messages, _ = build_messages(first["ask"])
+        second_answer = ask(second_messages, api_key)
         second_verdict, _ = grade(first, second_answer)
         similarity = difflib.SequenceMatcher(
             None, normalize(first["answer"]), normalize(second_answer)
@@ -215,6 +251,7 @@ def main() -> None:
 
     out = {
         "source_result": result_path.name,
+        "mode": mode,
         "prompt_version": PROMPT_VERSION,
         "template_fingerprint": template_fingerprint(),
         "model": "deepseek-flash",
@@ -238,15 +275,26 @@ def main() -> None:
         "rows": rows,
     }
 
-    json_path = RESULT_DIR / f"摘要版_探针结果_{stamp}.json"
+    prefix = "RAG版" if mode == "rag" else "摘要版"
+    json_path = RESULT_DIR / f"{prefix}_探针结果_{stamp}.json"
     json_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    if mode == "rag":
+        memory_line = (
+            f"- 记忆：画像 {len(payload.get('profile', ''))} 字 + "
+            f"{len(payload.get('memory', {}).get('segments', []))} 段片段（每题现场检索 3 段）"
+        )
+        title = "# RAG 版记忆评测"
+    else:
+        memory_line = f"- 摘要长度：{payload.get('summary_chars')} 字"
+        title = "# 基线（摘要版）记忆评测"
+
     lines = [
-        "# 基线（摘要版）记忆评测",
+        title,
         "",
         f"- 快照：`{result_path.name}`",
         f"- 提示词：{PROMPT_VERSION} / {template_fingerprint()}",
-        f"- 摘要长度：{payload.get('summary_chars')} 字",
+        memory_line,
         f"- 探针：{len(rows)} 条，温度 0",
         "",
         "## 分类准确率",
@@ -286,7 +334,7 @@ def main() -> None:
             f"{row['verdict']}：{row['reason']} |"
         )
 
-    md_path = RESULT_DIR / f"摘要版_探针报告_{stamp}.md"
+    md_path = RESULT_DIR / f"{prefix}_探针报告_{stamp}.md"
     md_path.write_text("\n".join(lines), encoding="utf-8")
 
     print(f"结果：{json_path}", flush=True)
