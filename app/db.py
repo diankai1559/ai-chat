@@ -1,4 +1,9 @@
-import uuid
+"""数据模型：用户、片段、消息、状态。
+
+单会话后不再有 sessions 表；一条消息属于某个片段（segment），
+片段既是历史分页的锚点，也是长期记忆的检索单元。
+"""
+
 from datetime import datetime
 
 from sqlalchemy import create_engine, ForeignKey
@@ -15,21 +20,27 @@ SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
-class Session(Base):
-    __tablename__ = "sessions"
+class Segment(Base):
+    """一次连续会话（30 分钟无消息即结束），也是知识库的一个片段。"""
+    __tablename__ = "segments"
     id = Column(Integer, primary_key=True)
-    uuid = Column(String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
-    user_id = Column(ForeignKey("users.id"), nullable=True)
-    name = Column(String(50), nullable=False, default="新会话")
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    user_id = Column(ForeignKey("users.id"), nullable=False, index=True)
+    seq = Column(Integer, nullable=False)                 # 用户内第几段
+    status = Column(String(10), nullable=False, default="open")  # open | closed
+    started_at = Column(DateTime, default=datetime.now, nullable=False)
+    last_active_at = Column(DateTime, default=datetime.now, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    turn_count = Column(Integer, default=0, nullable=False)
     summary = Column(Text, default="", nullable=False)
-    summary_until_id = Column(Integer, default=0 , nullable=True)
+    embedding = Column(Text, nullable=True)               # JSON 数组
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
 
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True)
-    session_id = Column(ForeignKey("sessions.id"), nullable=False)
+    user_id = Column(ForeignKey("users.id"), nullable=False)
+    segment_id = Column(ForeignKey("segments.id"), nullable=True)
     role = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
@@ -42,13 +53,15 @@ class User(Base):
     password_hash = Column(String(100), nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
+
 class UserState(Base):
-    """情绪（短周期）与关系（长周期）状态，按用户持久化。"""
+    """情绪（短周期）、关系（长周期）与常驻画像。"""
     __tablename__ = "user_states"
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     emotion = Column(String(20), default="平静", nullable=False)
     intensity = Column(Float, default=0.2, nullable=False)
     closeness = Column(Float, default=0.4, nullable=False)
+    profile = Column(Text, default="", nullable=False)
     updated_at = Column(DateTime, default=datetime.now, nullable=False)
 
 

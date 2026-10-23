@@ -97,8 +97,9 @@ def _call(fn, default):
         return default
 
 
-def get_messages(session_uuid):
-    data = _call(lambda c: c.get(f"chat:session:{session_uuid}:messages"), None)
+def get_recent(user_id, ttl=3600):
+    """当前会话最近几条消息，登录预热时写入。"""
+    data = _call(lambda c: c.get(f"chat:user:{user_id}:recent"), None)
     if not data:
         return None
     try:
@@ -107,14 +108,31 @@ def get_messages(session_uuid):
         return None
 
 
-def set_messages(session_uuid, message, ttl=3600):
+def set_recent(user_id, messages, ttl=3600):
     _call(lambda c: c.set(
-        f"chat:session:{session_uuid}:messages", json.dumps(message), ex=ttl,
+        f"chat:user:{user_id}:recent", json.dumps(messages, ensure_ascii=False), ex=ttl,
     ), None)
 
 
-def invalidate_messages(session_uuid):
-    _call(lambda c: c.delete(f"chat:session:{session_uuid}:messages"), None)
+def get_memory(user_id, ttl=3600):
+    """画像 + 片段摘要 + 向量，预热后整块复用。"""
+    data = _call(lambda c: c.get(f"chat:user:{user_id}:memory"), None)
+    if not data:
+        return None
+    try:
+        return json.loads(data)
+    except (ValueError, TypeError):
+        return None
+
+
+def set_memory(user_id, memory, ttl=3600):
+    _call(lambda c: c.set(
+        f"chat:user:{user_id}:memory", json.dumps(memory, ensure_ascii=False), ex=ttl,
+    ), None)
+
+
+def invalidate_memory(user_id):
+    _call(lambda c: c.delete(f"chat:user:{user_id}:memory"), None)
 
 
 def check_rate_limit(ip, limit=20, window=60):

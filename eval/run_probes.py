@@ -153,7 +153,7 @@ def main() -> None:
         return base_context + [{"role": "user", "content": question}], []
 
     total_turns = payload.get("turns_total") or payload.get("turns_done") or 134
-    probes = build_probes(total_turns)
+    probes = build_probes(total_turns, payload.get("turn_map"))
     if args.limit:
         probes = probes[: args.limit]
 

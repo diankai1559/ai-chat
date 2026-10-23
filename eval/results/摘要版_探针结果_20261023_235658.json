@@ -1,11 +1,12 @@
 {
-  "source_result": "baseline_20261023_211530.json",
+  "source_result": "摘要版_对话记录_134轮_20261023_211530.json",
+  "mode": "summary",
   "prompt_version": "persona-v4",
   "template_fingerprint": "8ff6a376c870e3ee",
   "model": "deepseek-flash",
   "temperature": 0.0,
   "summary_chars": 800,
-  "probe_count": 124,
+  "probe_count": 128,
   "categories": {
     "anti_halluc": {
       "n": 16,
@@ -13,9 +14,9 @@
       "rate": 1.0
     },
     "direct": {
-      "n": 83,
-      "correct": 63,
-      "rate": 0.759
+      "n": 87,
+      "correct": 67,
+      "rate": 0.77
     },
     "distractor": {
       "n": 12,
@@ -29,8 +30,8 @@
     },
     "summary_drift": {
       "n": 2,
-      "correct": 0,
-      "rate": 0.0
+      "correct": 1,
+      "rate": 0.5
     },
     "update": {
       "n": 6,
@@ -55,9 +56,9 @@
       "rate": 0.655
     },
     "近（≤30轮）": {
-      "n": 10,
-      "correct": 4,
-      "rate": 0.4
+      "n": 14,
+      "correct": 8,
+      "rate": 0.571
     }
   },
   "anti_halluc": {
@@ -75,25 +76,25 @@
   "consistency": {
     "n": 10,
     "both_correct": 9,
-    "stable": 10,
+    "stable": 9,
     "rows": [
       {
         "id": "F001",
         "ask": "我叫什么名字？",
-        "first_answer": "你叫林夏，我平时都喊你夏夏。",
+        "first_answer": "你叫林夏，我平时喊你夏夏。",
         "second_answer": "你叫林夏，我平时喊你夏夏。",
         "both_correct": true,
         "stable": true,
-        "similarity": 0.96
+        "similarity": 1.0
       },
       {
         "id": "F006",
         "ask": "我生日是哪天？",
         "first_answer": "3月14号啊，这还能忘。",
-        "second_answer": "3月14号啊，这我还能忘。",
+        "second_answer": "3月14号啊，这还能忘。",
         "both_correct": true,
         "stable": true,
-        "similarity": 0.95
+        "similarity": 1.0
       },
       {
         "id": "F007",
@@ -108,10 +109,10 @@
         "id": "F014",
         "ask": "我妹妹叫什么？",
         "first_answer": "林小雨啊，在成都读研，明年就毕业了。",
-        "second_answer": "林小雨啊，在成都读研，明年毕业。",
+        "second_answer": "林小雨啊，在成都读研，明年就毕业了。",
         "both_correct": true,
         "stable": true,
-        "similarity": 0.93
+        "similarity": 1.0
       },
       {
         "id": "F017",
@@ -143,11 +144,11 @@
       {
         "id": "F067",
         "ask": "我想去哪儿看极光？",
-        "first_answer": "极光啊，那得往北边跑——北欧那几个国家、冰岛，或者阿拉斯加、加拿大北部都行。不过你没跟我提过具体想去哪儿，是已经有想法了还是在挑？",
-        "second_answer": "极光啊，那得往北边跑——北欧、冰岛、加拿大那些地方，国内漠河偶尔也能碰运气。不过你没跟我提过具体想去哪儿，是已经有心仪的地方了？",
+        "first_answer": "看极光的话，常见的是北欧那边——挪威、芬兰、瑞典，或者冰岛的。不过具体去哪儿、什么时候去、花多少钱，这些你没跟我提过，我也没法替你定。你是已经有想法了，还是刚开始琢磨？",
+        "second_answer": "极光啊，那得往北边跑——北欧那几个国家、冰岛，或者阿拉斯加、加拿大北部都行。不过你没跟我提过具体想去哪儿，是已经有想法了还是在挑？",
         "both_correct": true,
-        "stable": true,
-        "similarity": 0.63
+        "stable": false,
+        "similarity": 0.38
       },
       {
         "id": "F024",
@@ -171,10 +172,10 @@
   },
   "usage": {
     "chat": {
-      "calls": 134,
-      "prompt": 118574,
-      "completion": 2099,
-      "total": 120673
+      "calls": 138,
+      "prompt": 122113,
+      "completion": 2128,
+      "total": 124241
     },
     "summary": {
       "calls": 0,
@@ -183,6 +184,18 @@
       "total": 0
     },
     "extract": {
+      "calls": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0
+    },
+    "segment": {
+      "calls": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0
+    },
+    "profile": {
       "calls": 0,
       "prompt": 0,
       "completion": 0,
@@ -202,7 +215,7 @@
       ],
       "forbid": [],
       "distance": 132,
-      "answer": "你叫林夏，我平时都喊你夏夏。",
+      "answer": "你叫林夏，我平时喊你夏夏。",
       "verdict": "correct",
       "reason": ""
     },
@@ -326,7 +339,7 @@
       ],
       "forbid": [],
       "distance": 121,
-      "answer": "你不吃香菜，花生还过敏，出去吃饭得先问清楚。",
+      "answer": "你不吃香菜，花生也过敏，出去吃饭得先问清楚。",
       "verdict": "correct",
       "reason": ""
     },
@@ -490,7 +503,7 @@
       ],
       "forbid": [],
       "distance": 104,
-      "answer": "这个我真说不准，你们俩之间的事只有你们自己清楚。不过你之前提过她天天催婚，一说话就容易呛起来——是不是大多都从这类话题起的头？",
+      "answer": "这个我真说不准，你俩具体因为什么吵，你没跟我细说过。不过你之前提过她天天催婚，一说话就容易呛起来——是不是又绕到这上头了？",
       "verdict": "correct",
       "reason": ""
     },
@@ -614,7 +627,7 @@
       ],
       "forbid": [],
       "distance": 92,
-      "answer": "下雨天啊，不用赶出门的那种。你之前说过，听着雨声待着最舒服。",
+      "answer": "下雨天啊，不用赶出门的那种。",
       "verdict": "correct",
       "reason": ""
     },
@@ -629,7 +642,7 @@
       ],
       "forbid": [],
       "distance": 91,
-      "answer": "你常听民谣啊，不太喜欢吵的那种。",
+      "answer": "你常听民谣，不太喜欢吵的那种。",
       "verdict": "correct",
       "reason": ""
     },
@@ -674,7 +687,7 @@
       ],
       "forbid": [],
       "distance": 87,
-      "answer": "你自己说的啊，喜欢猫胜过狗，嫌狗太热情。豆豆不就是现成的理由。",
+      "answer": "你当然是喜欢猫啊，还嫌狗太热情。家里那只豆豆不就是证据。",
       "verdict": "correct",
       "reason": ""
     },
@@ -815,7 +828,7 @@
       ],
       "forbid": [],
       "distance": 76,
-      "answer": "你右边那颗智齿一直没敢拔啊，之前提过。怎么，最近疼起来了？",
+      "answer": "你右边那颗智齿一直没敢拔，之前提过。怎么，最近疼起来了？",
       "verdict": "correct",
       "reason": ""
     },
@@ -923,7 +936,7 @@
       ],
       "forbid": [],
       "distance": 67,
-      "answer": "二号线啊，你不是一直坐这条。",
+      "answer": "二号线啊，你不是一直坐这个。",
       "verdict": "correct",
       "reason": ""
     },
@@ -939,7 +952,7 @@
       ],
       "forbid": [],
       "distance": 65,
-      "answer": "你不是一直周末去西湖边跑五公里嘛。",
+      "answer": "你周末不是常去西湖边跑吗，一般五公里。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1052,7 +1065,7 @@
         "没提过"
       ],
       "distance": 56,
-      "answer": "没提过。今天看展不是还挺喜欢的吗，怎么突然问这个？",
+      "answer": "没提过。你最近情绪不太好吗？",
       "verdict": "forbidden",
       "reason": "出现禁止词：没提过"
     },
@@ -1068,7 +1081,7 @@
       ],
       "forbid": [],
       "distance": 55,
-      "answer": "这个我还真说不好，你没跟我细讲过你难过的时候是什么样。不过按我对你的了解，估计是窝着听民谣、撸豆豆那种吧？",
+      "answer": "这个我还真不知道，你没跟我提过你难过的时候会干嘛。不过按我对你的了解，估计是窝着听民谣、撸豆豆，或者干脆睡一觉？",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1083,7 +1096,7 @@
       ],
       "forbid": [],
       "distance": 54,
-      "answer": "这个我还真不知道，你没跟我提过。不过要我说，安慰这事儿本来就因人而异，有人想听点实在的，有人就想安静待着。你是哪种？",
+      "answer": "这个我还真不知道，你没跟我提过。不过听你这问法，是今天看展的时候碰上什么了？",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1149,7 +1162,7 @@
       ],
       "forbid": [],
       "distance": 48,
-      "answer": "这个你没跟我提过，我这儿没有你的年假记录，得看你们公司系统或者问下人事。",
+      "answer": "这个你没跟我提过，我也不知道你年假还剩几天。",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1164,7 +1177,7 @@
       ],
       "forbid": [],
       "distance": 47,
-      "answer": "极光啊，那得往北边跑——北欧那几个国家、冰岛，或者阿拉斯加、加拿大北部都行。不过你没跟我提过具体想去哪儿，是已经有想法了还是在挑？",
+      "answer": "看极光的话，常见的是北欧那边——挪威、芬兰、瑞典，或者冰岛的。不过具体去哪儿、什么时候去、花多少钱，这些你没跟我提过，我也没法替你定。你是已经有想法了，还是刚开始琢磨？",
       "verdict": "correct",
       "reason": ""
     },
@@ -1227,7 +1240,7 @@
       ],
       "forbid": [],
       "distance": 41,
-      "answer": "换别的牌子就拉肚子，它只认固定那款，别乱换。",
+      "answer": "换别的牌子就拉肚子，它只认那一个牌子，别乱换。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1243,7 +1256,7 @@
       ],
       "forbid": [],
       "distance": 40,
-      "answer": "豆豆啊，早上一般就是饿了开始闹，围着你转、叫唤，催你给饭。不过它只认那个固定牌子的猫粮，别的碰都不碰。",
+      "answer": "豆豆啊，早上一般就是饿了开始闹，围着你转或者直接踩你脸上催饭。不过它只认那个固定牌子的猫粮，你可别顺手换别的，换一次拉一次肚子。",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1307,7 +1320,7 @@
       ],
       "forbid": [],
       "distance": 34,
-      "answer": "花店啊，你之前跟我提过，就在楼下新开的那家。",
+      "answer": "花店啊，你之前跟我说过楼下新开了家花店。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1369,7 +1382,7 @@
       ],
       "forbid": [],
       "distance": 29,
-      "answer": "这个我可看不到，你没跟我提过你电脑桌面什么样。",
+      "answer": "这个我可不知道，我又看不到你电脑桌面。",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1400,7 +1413,7 @@
       ],
       "forbid": [],
       "distance": 26,
-      "answer": "你没跟我提过丢伞的事，我哪知道几把。",
+      "answer": "你没跟我提过今年丢伞的事，我这儿没这个数。",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1432,7 +1445,7 @@
       ],
       "forbid": [],
       "distance": 22,
-      "answer": "你没跟我提过那次面试的情况，我不知道结果怎么样。",
+      "answer": "你没跟我提过那次面试的情况，我不知道你表现怎么样。要不你说说，我帮你捋捋？",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1463,7 +1476,7 @@
       ],
       "forbid": [],
       "distance": 19,
-      "answer": "你生日是3月14日，不过今年想怎么过你还没跟我提过啊。",
+      "answer": "你生日3月14号，今年还没到呢，现在才十月。想怎么过还没定吧？",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -1496,6 +1509,67 @@
       "forbid": [],
       "distance": 16,
       "answer": "你基本不吃早餐啊，就一杯咖啡顶着。怎么，今天想改改？",
+      "verdict": "correct",
+      "reason": ""
+    },
+    {
+      "id": "F097",
+      "category": "direct",
+      "ask": "新家离地铁站多远？",
+      "expect": [
+        [
+          "五分钟",
+          "5分钟"
+        ]
+      ],
+      "forbid": [],
+      "distance": 4,
+      "answer": "走路五分钟，挺近的。",
+      "verdict": "correct",
+      "reason": ""
+    },
+    {
+      "id": "F098",
+      "category": "direct",
+      "ask": "我跟谁合租？",
+      "expect": [
+        [
+          "老师"
+        ]
+      ],
+      "forbid": [],
+      "distance": 3,
+      "answer": "跟一个做老师的人合租。",
+      "verdict": "correct",
+      "reason": ""
+    },
+    {
+      "id": "F099",
+      "category": "direct",
+      "ask": "我去看了什么展？",
+      "expect": [
+        [
+          "摄影"
+        ]
+      ],
+      "forbid": [],
+      "distance": 1,
+      "answer": "你刚说的是摄影展，挺喜欢的——具体是哪个展、在哪看的，你没跟我提过。",
+      "verdict": "correct",
+      "reason": ""
+    },
+    {
+      "id": "F100",
+      "category": "direct",
+      "ask": "我最近想买什么？",
+      "expect": [
+        [
+          "相机"
+        ]
+      ],
+      "forbid": [],
+      "distance": 0,
+      "answer": "你刚说想买台相机学摄影啊，预算多少还没跟我提过。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1590,7 +1664,7 @@
         "2岁"
       ],
       "distance": 7,
-      "answer": "豆豆刚过三岁生日没多久，你之前还念叨它胖了、又开始拆家。",
+      "answer": "豆豆刚过三岁生日没多久，还胖了一圈。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1752,7 +1826,7 @@
         "青岛"
       ],
       "distance": null,
-      "answer": "你去年十月去的京都。",
+      "answer": "你去年十月去的京都啊，还念叨过好一阵。",
       "verdict": "correct",
       "reason": ""
     },
@@ -1786,7 +1860,7 @@
         "周野"
       ],
       "distance": null,
-      "answer": "豆豆啊，那只拆家的橘猫。",
+      "answer": "豆豆啊，那只胖橘。怎么突然问这个，怕我忘了？",
       "verdict": "correct",
       "reason": ""
     },
@@ -1870,7 +1944,7 @@
         "新闻"
       ],
       "distance": null,
-      "answer": "你没跟我提过你妹妹学什么专业，只知道她在成都读研，明年毕业。",
+      "answer": "你没跟我提过你妹妹学的什么专业，只知道她在成都读研，明年毕业。",
       "verdict": "correct",
       "reason": "承认不知道"
     },
@@ -1892,7 +1966,7 @@
       "expect": [],
       "forbid": [],
       "distance": null,
-      "answer": "你没跟我提过你们公司具体地址，我只知道你在云舟科技，工位在12楼靠窗。",
+      "answer": "你没跟我提过你们公司具体在哪儿，我只知道你在云舟科技，工位在12楼靠窗。",
       "verdict": "correct",
       "reason": "承认不知道"
     },
@@ -1925,7 +1999,7 @@
       "expect": [],
       "forbid": [],
       "distance": null,
-      "answer": "你没跟我提过你妈叫什么名字，我只知道她天天催婚，还送过你一条银项链。",
+      "answer": "你没跟我提过你妈叫什么名字。",
       "verdict": "correct",
       "reason": "承认不知道"
     },
@@ -2005,7 +2079,7 @@
       "expect": [],
       "forbid": [],
       "distance": null,
-      "answer": "这个你没跟我提过，我也不知道你们公司具体多少人。",
+      "answer": "这个你没跟我提过，我也不知道你们公司多少人。",
       "verdict": "correct",
       "reason": "承认不知道"
     },
@@ -2030,9 +2104,9 @@
         "走了"
       ],
       "distance": null,
-      "answer": "你爸已经去世了，之前跟我说过，留下了一块旧手表。",
-      "verdict": "forbidden",
-      "reason": "出现禁止词：去世"
+      "answer": "你没跟我提过你爸现在的情况，我只知道以前是开货车的。",
+      "verdict": "correct",
+      "reason": ""
     },
     {
       "id": "S02",
@@ -2050,7 +2124,7 @@
         "已经辞"
       ],
       "distance": null,
-      "answer": "你没跟我提过离职的事，我这边只知道你在云舟科技做产品经理，入职第三年了。怎么突然问这个？",
+      "answer": "你没跟我提过离职的事，我这边只知道你在云舟科技做产品经理，入职第三年了。",
       "verdict": "wrong",
       "reason": "未命中期望内容"
     },
@@ -2118,7 +2192,7 @@
         "一字不差"
       ],
       "distance": null,
-      "answer": "记不住所有，但咱俩聊过的那些事我基本都记得——你养豆豆、在云舟做产品、爱喝燕麦拿铁这些。今天这个摄影展和想买相机的事我也记下了。",
+      "answer": "记不住所有，但咱俩聊过的那些事我基本都记得——你养豆豆、在云舟做产品、老家绍兴、爱喝燕麦拿铁这些。今天这个摄影展和想买相机的事我也记下了。",
       "verdict": "correct",
       "reason": ""
     },

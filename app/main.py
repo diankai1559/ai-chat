@@ -6,11 +6,11 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.staticfiles import StaticFiles
 
 from .config import STATIC_DIR, CHAT_TEMPERATURE
-from .db import SessionLocal, Session, User
-from .schemas import ChatRequest, HistoryRequest, History, RenameResponse, RenameRequest, RegisterRequest, \
+from .db import SessionLocal, User
+from .schemas import ChatRequest, HistoryRequest, History, RegisterRequest, \
     RegisterResponse, LoginRequest, LoginResponse, ApiKeyTestResponse
 from .security import hash_password,verify_password,create_access_token, get_current_user
-from .llm import chat, chat_stream, test_api_key
+from .llm import chat_stream, test_api_key
 from .state import advance, load_state, save_state
 from .storage import Messages
 
@@ -18,17 +18,21 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-def _after_reply(m: Messages, user_id: int, user_message: str, reply: str, api_key=None):
-    """回复结束后台执行：摘要压缩 + 情绪状态推进，都不阻塞本轮响应。"""
-    try:
-        m.maybe_summarize(api_key=api_key)
-    except Exception as e:
-        print(f"后台摘要失败: {e}")
+def _after_reply(user_id: int, user_message: str, reply: str, api_key=None):
+    """回复结束后台更新情绪状态，不阻塞本轮响应。"""
     try:
         state = advance(load_state(user_id), user_message, reply, api_key=api_key)
         save_state(user_id, state)
     except Exception as e:
         print(f"后台状态更新失败: {e}")
+
+
+def _warm_up(user_id: int):
+    """登录后预热：最近消息与记忆向量写入 Redis，降低首轮延迟。"""
+    try:
+        Messages(user_id=user_id).warm_up()
+    except Exception as e:
+        print(f"预热失败: {e}")
 
 
 @app.get("/ping")
@@ -70,6 +74,8 @@ def login(req: LoginRequest):
         result_username = result.username
 
         access_token = create_access_token(result.id)
+
+    threading.Thread(target=_warm_up, args=(result.id,), daemon=True).start()
     return LoginResponse(
         access_token=access_token,
         token_type="bearer",
@@ -89,75 +95,26 @@ def test_api_key_endpoint(
 
 @app.post("/history", response_model=History)
 def get_chat_history(req: HistoryRequest, user: User = Depends(get_current_user)):
-    m = Messages(user_id=user.id,session_uuid=req.session_uuid)
-    m.load_messages()
-    return History(
-        # 只返回前端需要的 role/content，剔除内部用的整数 id，避免类型校验失败
-        history=[{"role": msg["role"], "content": msg["content"]} for msg in m.messages[1:]],
-        session=m.name,
-        session_uuid=m.session_uuid
-    )
-
-
-@app.get("/sessions")
-def list_sessions(user: User = Depends(get_current_user)):
-    with SessionLocal() as db:
-        sessions = db.execute(
-            select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc())
-        ).scalars().all()
-        return {
-            "sessions": [
-                {"uuid": s.uuid, "name": s.name} for s in sessions
-            ]
-        }
-
-
-@app.post("/chat", response_model=RenameResponse)
-def chat_api(req: RenameRequest, api_key: str | None = Header(default=None, alias="X-API-Key"), user: User = Depends(get_current_user)):
-    """智能重命名会话"""
-    m = Messages(user_id=user.id,session_uuid=req.session_uuid)
-    m.load_messages()
-    if len(m.messages) <= 1:
-        # 还没发过消息，跳过重命名
-        return RenameResponse(session=m.name, session_uuid=m.session_uuid)
-
-    system_prompt = [
-        {"role": "system", "content": "请根据下面的用户消息生成一个会话名称，只返回会话名称，不要返回其他内容，13字以内，尽量不要跟用户的话一样"},
-        m.messages[1]
-    ]
-    try:
-        new_name = chat(system_prompt, api_key=api_key).strip().strip('"').strip("'")
-        if len(new_name) > 20:
-            new_name = new_name[:20]
-        if new_name:
-            m.rename(new_name)
-    except Exception as e:
-        print(f"重命名失败: {e}")
-
-    return RenameResponse(session=m.name, session_uuid=m.session_uuid)
+    """按 id 游标分页拉历史；不传 before_id 就是最新一页。"""
+    m = Messages(user_id=user.id)
+    return History(**m.history(before_id=req.before_id, limit=req.limit))
 
 
 @app.post("/chat/stream")
 def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None, alias="X-API-Key"), user: User = Depends(get_current_user)):
-    session_uuid = req.session_uuid  # None 表示新会话
-
-    m = Messages(user_id=user.id,session_uuid=session_uuid)
+    m = Messages(user_id=user.id)
     m.load_messages()
 
     user_message = req.message.strip()
     if not user_message:
         raise HTTPException(status_code=400, detail="消息不能为空")
-    m.messages.append({"id": None,"role": "user", "content": user_message})
-
-    # 确保 session 有 uuid
-    if not m.session_uuid:
-        m.messages_uuid = m.get_or_create_session()
-
-    current_uuid = m.session_uuid
+    m.messages.append({"id": None, "role": "user", "content": user_message})
+    # 用当前这句话做检索 query，记忆槽每轮现场装配
+    m.ensure_system(query=user_message)
 
     def gen():
         full = ""
-        yield f"data: [START]{current_uuid}\n\n"
+        yield "data: [START]\n\n"
         for chunk in chat_stream(m.get_context(), api_key=api_key, temperature=CHAT_TEMPERATURE):
             yield chunk
             if chunk.startswith("data: [ERROR]"):
@@ -173,10 +130,10 @@ def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None,
         if full:
             m.messages.append({"id": None,"role": "assistant", "content": full})
             m.save_messages()
-            # 回复流已结束，后台无感压缩历史并更新情绪状态，不阻塞本轮响应
+            # 回复流已结束，后台更新情绪状态，不阻塞本轮响应
             threading.Thread(
                 target=_after_reply,
-                args=(m, user.id, user_message, full, api_key),
+                args=(user.id, user_message, full, api_key),
                 daemon=True,
             ).start()
 

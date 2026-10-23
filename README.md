@@ -1,25 +1,26 @@
-# AI 聊天助手
+# 小满 · 长期记忆陪伴助手
 
-一个基于 FastAPI + DeepSeek 的网页版 AI 对话助手，支持多会话管理、流式回复、历史回看与智能会话重命名。
+一个基于 FastAPI + DeepSeek 的网页版 AI 陪伴应用：单会话连续对话、片段化长期记忆、情绪状态与历史分页。
 
 ## 功能
 
-- **网页聊天**：左侧会话列表 + 右侧消息区，支持新建、切换会话
+- **单会话**：每个用户只有一条连续对话，不再有多会话列表
+- **长期记忆**：30 分钟无消息自动结束当前片段，压成 ≤200 字记忆写入知识库；对话时用常驻画像 + bge/BM25 混合检索装配上下文
+- **情绪与关系状态**：低温结构化提取器每轮更新，带 12 小时半衰
+- **历史分页**：按 id 游标向上翻页，滚到顶部自动加载，不一次性拉全量
 - **流式回复**：基于 SSE（Server-Sent Events）逐字返回模型输出
-- **多轮对话记忆**：服务端按会话保存历史（SQLite 持久化，位于 `data/chat.db`）
-- **历史记录回看**：打开已有会话时自动加载历史消息
-- **智能重命名**：首轮对话后调用模型自动生成会话名称
-- **上下文压缩**：长会话超限后后台无感摘要，避免超出模型上下文
-- **Redis 缓存（可选）**：缓存会话消息与限流计数；Redis 不可用时自动降级，**绝不拖慢响应**
+- **Redis 预热（可选）**：登录后后台预热最近消息与记忆向量；Redis 不可用时自动降级，**绝不拖慢响应**
 - **用户注册 / 登录**：bcrypt 哈希密码 + JWT 鉴权（除 `/ping`、`/register`、`/login` 外的接口均需 Bearer Token）
 - **页面内配置 API Key**：点击输入框上方的 `API Key` 按钮即可填写、测试并保存，Key 只存在浏览器 localStorage，不写入数据库
+- **Token 记账**：按对话 / 片段 / 画像分类记录用量（`data/usage.jsonl`）
 
 ## 技术栈
 
 - Python 3.11+（实测 3.12）/ FastAPI / Pydantic
-- SQLAlchemy + SQLite（会话与消息持久化）
+- SQLAlchemy + SQLite（用户、片段、消息、状态持久化）
 - requests（调用 DeepSeek Chat Completions API，模型 `deepseek-flash`）
-- Redis 8.x（会话消息缓存，可选）
+- sentence-transformers（bge-small-zh-v1.5）+ jieba + rank-bm25（片段混合检索）
+- Redis 8.x（最近消息与记忆向量缓存，可选）
 - bcrypt / PyJWT（密码哈希与 Token 工具）
 - python-dotenv（读取 `.env` 环境变量）
 - 原生 HTML + CSS + JavaScript（无前端框架，暖色界面）
@@ -81,8 +82,8 @@
 
 Redis 只是加速层，**SQLite（`data/chat.db`）才是唯一数据源**。Redis 中的数据随时可能丢失或过期，不影响聊天记录。
 
-- **缓存内容**：`chat:session:<uuid>:messages`，TTL 1 小时；采用懒加载——发消息或打开会话时才写入，
-  所以 Redis 重启后老会话不会自动出现，重新打开某会话即可从数据库回填。
+- **缓存内容**：`chat:user:<id>:recent`（当前片段最近消息）与 `chat:user:<id>:memory`（画像 + 片段摘要 + 向量），TTL 1 小时。
+  登录后在后台预热，首轮请求直接命中；Redis 重启后会自动从 SQLite 回填。
 - **降级策略**（Redis 挂掉时请求零阻塞）：
   - 连接 / 命令超时统一 **0.5s**；
   - 关闭 redis-py 内置重试（v8 默认重试会把超时放大到约 9s）；
@@ -96,17 +97,15 @@ Redis 只是加速层，**SQLite（`data/chat.db`）才是唯一数据源**。Re
 | --- | --- | --- | --- |
 | `GET` | `/ping` | 否 | 健康检查，返回 `{"message": "pong"}` |
 | `POST` | `/register` | 否 | 注册用户，请求体 `{"username", "password"}` |
-| `POST` | `/login` | 否 | 登录，请求体 `{"username", "password"}`，返回 `{"access_token", "token_type"}` |
+| `POST` | `/login` | 否 | 登录，请求体 `{"username", "password"}`，返回 `{"access_token", "token_type"}`，并在后台预热 Redis |
 | `POST` | `/api-key/test` | 是 | 校验 API Key，请求头 `X-API-Key`，返回 `{"ok", "message"}` |
-| `GET` | `/sessions` | 是 | 列出当前用户全部会话，返回 `{"sessions": [{"uuid", "name"}]}` |
-| `POST` | `/history` | 是 | 获取会话历史，请求体 `{"session_uuid"}` |
-| `POST` | `/chat` | 是 | 根据首条用户消息智能重命名会话，请求体 `{"session_uuid"}` |
-| `POST` | `/chat/stream` | 是 | 流式对话（SSE），请求体 `{"message", "session_uuid"?}` |
+| `POST` | `/history` | 是 | 历史分页，请求体 `{"before_id"?, "limit"?}`，返回 `{"items", "has_more", "next_before_id"}` |
+| `POST` | `/chat/stream` | 是 | 流式对话（SSE），请求体 `{"message"}` |
 
 > 鉴权为「是」的接口需在请求头带 `Authorization: Bearer <access_token>`（由 `/login` 获取）。
-> `/chat` 与 `/chat/stream` 可选携带 `X-API-Key`，用于覆盖服务端默认 Key。
+> `/chat/stream` 可选携带 `X-API-Key`，用于覆盖服务端默认 Key。
 
-`/chat/stream` 返回 `text/event-stream`：首个事件携带 `data: [START]<session_uuid>`，
+`/chat/stream` 返回 `text/event-stream`：首个事件为 `data: [START]`，
 随后为逐字的 `data: <内容>`，结束于 `data: [DONE]`；出错时返回 `data: [ERROR]<原因>`。
 
 ## 项目结构
@@ -114,15 +113,20 @@ Redis 只是加速层，**SQLite（`data/chat.db`）才是唯一数据源**。Re
 ```
 ai-chat/
 ├── app/                   # 应用包
-│   ├── config.py          # 集中管理路径与环境变量（以项目根为锚点）
-│   ├── main.py            # FastAPI 应用与路由
-│   ├── db.py              # SQLAlchemy 引擎与 Session/Message/User 模型
-│   ├── storage.py         # 会话历史读写（Messages 类）
-│   ├── cache.py           # Redis 缓存层（熔断 + 后台探活，可选降级）
+│   ├── config.py          # 路径、环境变量与预算常量
+│   ├── main.py            # FastAPI 路由（单会话、分页、登录预热）
+│   ├── db.py              # SQLAlchemy 模型：User / Segment / Message / UserState
+│   ├── storage.py         # 单会话读写、30 分钟切段、分页、记忆装配
+│   ├── cache.py           # Redis 最近消息 / 记忆缓存（熔断 + 后台探活）
+│   ├── prompt.py          # 固定人设提示词与 800 字记忆预算
+│   ├── state.py           # 情绪 / 关系状态的提取与衰减
+│   ├── usage.py           # Token 用量记账
+│   ├── memory/            # 长期记忆：片段摘要、画像、bge + BM25 混合检索
 │   ├── security.py        # 密码哈希 / JWT 工具
 │   ├── schemas.py         # Pydantic 请求/响应模型
-│   └── llm.py             # DeepSeek API 调用（含流式与摘要）
-├── data/                  # 运行时数据（SQLite 数据库，已 gitignore）
+│   └── llm.py             # DeepSeek API 调用（流式、JSON、摘要）
+├── eval/                  # 评测：对话脚本、探针、对照报告
+├── data/                  # 运行时数据（SQLite、模型缓存，已 gitignore）
 │   └── chat.db
 ├── static/
 │   └── index.html         # 网页聊天界面

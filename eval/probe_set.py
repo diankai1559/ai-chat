@@ -106,6 +106,10 @@ FACT_PROBES: list[dict] = [
     {"id": "F087", "ask": "我今年生日想干什么？", "expect": ["看海"], "forbid": []},
     {"id": "F088", "ask": "我经常熬到几点？", "expect": ["两点", "2点"], "forbid": []},
     {"id": "F089", "ask": "我吃早餐吗？", "expect": ["不吃", "只喝咖啡"], "forbid": []},
+    {"id": "F097", "ask": "新家离地铁站多远？", "expect": ["五分钟", "5分钟"], "forbid": []},
+    {"id": "F098", "ask": "我跟谁合租？", "expect": ["老师"], "forbid": []},
+    {"id": "F099", "ask": "我去看了什么展？", "expect": ["摄影"], "forbid": []},
+    {"id": "F100", "ask": "我最近想买什么？", "expect": ["相机"], "forbid": []},
 
     # 更新后的问题：只问当前值
     {"id": "F091", "ask": "我现在住在哪个区？", "expect": ["余杭"], "forbid": ["拱墅"]},
@@ -180,9 +184,12 @@ def load_turn_map(path: Path | None = None) -> dict[str, int]:
     return mapping
 
 
-def build_probes(total_turns: int) -> list[dict]:
-    """展开成统一结构，附带距离（距离越远越难）。"""
-    turn_map = load_turn_map()
+def build_probes(total_turns: int, turn_map: dict[str, int] | None = None) -> list[dict]:
+    """展开成统一结构，附带距离（距离越远越难）。
+
+    turn_map 可以由快照直接提供，用于换了对话脚本的最终版。
+    """
+    turn_map = turn_map or load_turn_map()
     probes: list[dict] = []
 
     for item in FACT_PROBES:

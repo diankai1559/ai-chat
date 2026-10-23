@@ -711,14 +711,10 @@
     <!-- 左侧边栏 -->
     <aside>
         <div class="side-top">
-            <button class="nav-item" id="nav-new">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg>
-                <span>新对话</span>
-            </button>
         </div>
 
-        <div class="chats-label">对话</div>
-        <ul class="session-list" id="session-list"></ul>
+        <div class="chats-label" hidden>对话</div>
+        <ul class="session-list" id="session-list" hidden></ul>
 
         <div class="side-bottom">
             <button class="user-cell" id="user-menu-btn" type="button">
@@ -735,7 +731,7 @@
     <!-- 右侧主区域 -->
     <main>
         <header>
-            <h1 id="chat-title">新对话</h1>
+            <h1 id="chat-title">小满</h1>
         </header>
 
         <!-- 消息区：欢迎页 与 消息列表 二选一 -->
@@ -1035,15 +1031,14 @@
     const outputEl = document.getElementById("output");
     const welcomeEl = document.getElementById("welcome");
     const messagesEl = document.getElementById("messages");
-    const listEl = document.getElementById("session-list");
     const msgInput = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
     const titleEl = document.getElementById("chat-title");
 
-    // currentSession 存会话 uuid（后端生成的唯一标识，用来定位是哪个会话）
-    // currentSessionName 只用于界面显示，二者分工不同
-    let currentSession = null;      // uuid
-    let currentSessionName = null;  // 显示名
+    // 单会话：没有会话列表，历史按 id 游标向上翻页
+    let historyBefore = null;
+    let hasMoreHistory = false;
+    let loadingHistory = false;
 
     /* ==================== 视图切换 ==================== */
 
@@ -1058,143 +1053,93 @@
         }
     }
 
-    // 显示欢迎页（新会话状态）
     function showWelcome() {
-        currentSession = null;
-        currentSessionName = null;
-        titleEl.textContent = "新对话";
         messagesEl.innerHTML = "";
         messagesEl.hidden = true;
         welcomeEl.hidden = false;
         outputEl.scrollTop = 0;
-        document.querySelectorAll(".session-item")
-            .forEach(el => el.classList.remove("active"));
-        // 清除所有导航项高亮（如退出登录），并默认高亮“新对话”
-        document.querySelectorAll(".nav-item")
-            .forEach(el => el.classList.remove("active"));
-        document.getElementById("nav-new").classList.add("active");
+        titleEl.textContent = "小满";
     }
 
-    // 显示消息列表（已有会话状态）
     function showMessages() {
         welcomeEl.hidden = true;
         messagesEl.hidden = false;
         msgInput.focus();
     }
 
-    // 往消息区追加一条消息
-    function addMessage(role, text) {
+    function makeMessage(role, text) {
         const p = document.createElement("div");
         p.className = "msg " + role;
         p.textContent = text;
+        return p;
+    }
+
+    function addMessage(role, text) {
+        const p = makeMessage(role, text);
         messagesEl.appendChild(p);
         outputEl.scrollTop = outputEl.scrollHeight;
         return p;
     }
 
-    // 新建会话 = 回到欢迎页
-    function createSession() {
-        showWelcome();
-        msgInput.value = "";
-        autoGrow();
-        updateSendState();
-        msgInput.focus();
-    }
+    /* ==================== 历史分页 ==================== */
 
-    /* ==================== 侧边栏导航 ==================== */
-
-    const navItems = document.querySelectorAll(".nav-item");
-    navItems.forEach(item => {
-        item.addEventListener("click", () => {
-            navItems.forEach(i => i.classList.remove("active"));
-            item.classList.add("active");
-        });
-    });
-
-    document.getElementById("nav-new").addEventListener("click", () => {
-        createSession();
-    });
-
-    /* ==================== 后端接口 ==================== */
-
-    async function loadSessions() {
-        const r = await fetch("/sessions", {headers: authHeaders()});
-        if (r.status === 401) { showAuth(); return []; }
-        const data = await r.json();
-        return data.sessions;  // [{uuid, name}, ...]
-    }
-
-    async function loadHistory(uuid) {
+    async function fetchHistory(beforeId) {
         const r = await fetch("/history", {
             method: "POST",
             headers: {"Content-Type": "application/json", ...authHeaders()},
-            body: JSON.stringify({session_uuid: uuid})
+            body: JSON.stringify({before_id: beforeId, limit: 30})
         });
         if (r.status === 401) { showAuth(); throw new Error("unauthorized"); }
-        const data = await r.json();
-        return {history: data.history, name: data.session};
+        if (!r.ok) throw new Error("history failed");
+        return r.json();
     }
 
-    /* ==================== 会话列表 ==================== */
-
-    // 新会话占位项：先以偏白色高光出现，等智能命名后再变为黄色高光
-    function addPendingSession(uuid) {
-        document.querySelectorAll(".session-item")
-            .forEach(el => el.classList.remove("active"));
-        const li = document.createElement("li");
-        li.className = "session-item pending";
-        li.textContent = "新会话";
-        li.dataset.uuid = uuid;
-        li.addEventListener("click", () => openSession(uuid, "新会话", li));
-        listEl.insertBefore(li, listEl.firstChild);
-        return li;
-    }
-
-    async function refreshSessions() {
-        let sessions = [];
+    async function loadInitialHistory() {
         try {
-            sessions = await loadSessions();
-        } catch (e) {
-            console.error("加载会话列表失败", e);
-            return;
-        }
-
-        listEl.innerHTML = "";
-        for (const s of sessions) {
-            const li = document.createElement("li");
-            li.className = "session-item";
-            li.textContent = s.name;
-            li.dataset.uuid = s.uuid;
-            if (s.uuid === currentSession) li.classList.add("active");
-            li.addEventListener("click", () => openSession(s.uuid, s.name, li));
-            listEl.appendChild(li);
-        }
-    }
-
-    async function openSession(uuid, name, li) {
-        document.querySelectorAll(".session-item")
-            .forEach(el => el.classList.remove("active"));
-        if (li) li.classList.add("active");
-
-        navItems.forEach(i => i.classList.remove("active"));
-
-        currentSession = uuid;
-        currentSessionName = name;
-        titleEl.textContent = name;
-        showMessages();
-        messagesEl.innerHTML = "";
-
-        try {
-            const {history, name: serverName} = await loadHistory(uuid);
-            currentSessionName = serverName;
-            titleEl.textContent = serverName;
-            for (const item of history) {
-                addMessage(item.role === "user" ? "user" : "ai", item.content);
+            const data = await fetchHistory(null);
+            if (!data.items.length) { showWelcome(); return; }
+            messagesEl.innerHTML = "";
+            for (const item of data.items) {
+                messagesEl.appendChild(
+                    makeMessage(item.role === "user" ? "user" : "ai", item.content)
+                );
             }
+            showMessages();
+            outputEl.scrollTop = outputEl.scrollHeight;
+            historyBefore = data.next_before_id;
+            hasMoreHistory = data.has_more;
         } catch (e) {
-            addMessage("ai", "历史记录加载失败");
+            showWelcome();
         }
     }
+
+    async function loadOlderHistory() {
+        if (loadingHistory || !hasMoreHistory || !historyBefore) return;
+        loadingHistory = true;
+        const prevHeight = messagesEl.scrollHeight;
+        try {
+            const data = await fetchHistory(historyBefore);
+            const frag = document.createDocumentFragment();
+            for (const item of data.items) {
+                frag.appendChild(
+                    makeMessage(item.role === "user" ? "user" : "ai", item.content)
+                );
+            }
+            messagesEl.insertBefore(frag, messagesEl.firstChild);
+            outputEl.scrollTop += messagesEl.scrollHeight - prevHeight;
+            historyBefore = data.next_before_id;
+            hasMoreHistory = data.has_more;
+        } catch (e) {
+            console.error("加载更早消息失败", e);
+        } finally {
+            loadingHistory = false;
+        }
+    }
+
+    // 滚到顶部自动加载上一页，保持滚动位置不跳动
+    outputEl.addEventListener("scroll", () => {
+        if (outputEl.scrollTop <= 8) loadOlderHistory();
+    });
 
     /* ==================== 输入框状态 ==================== */
 
@@ -1247,23 +1192,11 @@
         loading.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
         scrollToLatest(loading);
 
-        const isNewChat = currentSession === null;
-        let pendingItem = null;
-        const removePending = () => {
-            if (pendingItem) { pendingItem.remove(); pendingItem = null; }
-        };
-
         try {
-            // 发给后端的 JSON：新会话只带 message；续聊时再带上 session_uuid
-            const body = {message: text};
-            if (currentSession) {
-                body.session_uuid = currentSession;
-            }
-
             const r = await fetch("/chat/stream", {
                 method: "POST",
                 headers: {"Content-Type": "application/json", ...authHeaders(), ...apiKeyHeaders()},
-                body: JSON.stringify(body)
+                body: JSON.stringify({message: text})
             });
             if (r.status === 401) {
                 showAuth();
@@ -1274,7 +1207,6 @@
                 const errMsg = typeof result.detail === "string" ? result.detail : r.status;
                 loading.classList.remove("typing");
                 loading.textContent = "出错了 - " + errMsg;
-                removePending();
                 return;
             }
             const reader = await r.body.getReader();
@@ -1290,20 +1222,11 @@
                 for (const part of parts) {
                     if (!part.startsWith("data: ")) continue;
                     const content = part.slice(6);
-                    // 后端把新会话的 uuid 放在流首帧 [START]<uuid> 里发回来，
-                    // 前端存下它，之后所有请求（history / chat / stream）都带上它
-                    if (content.startsWith("[START]")) {
-                        currentSession = content.slice(7);
-                        if (isNewChat && !pendingItem) {
-                            pendingItem = addPendingSession(currentSession);
-                        }
-                        continue;
-                    }
+                    if (content.startsWith("[START]")) continue;
                     if (content === "[DONE]") break;
                     if (content.startsWith("[ERROR]")) {
                         loading.classList.remove("typing");
                         loading.textContent = "出错了 - " + content;
-                        removePending();
                         return;
                     }
                     if (content === "") continue;
@@ -1315,52 +1238,16 @@
                 }
             }
 
-            // 重命名会话（只在新对话且有回复时触发）
-            if (full && isNewChat) {
-                try {
-                    const r2 = await fetch("/chat", {
-                        method: "POST",
-                        headers: {"Content-Type": "application/json", ...authHeaders(), ...apiKeyHeaders()},
-                        body: JSON.stringify({session_uuid: currentSession})
-                    });
-                    if (r2.status === 401) {
-                        showAuth();
-                        return;
-                    }
-                    if (r2.ok) {
-                        const data = await r2.json();
-                        currentSessionName = data.session;
-                        titleEl.textContent = data.session;
-                        // 占位项由偏白色高光切到黄色高光
-                        if (pendingItem) {
-                            pendingItem.textContent = data.session;
-                            pendingItem.classList.remove("pending");
-                            pendingItem.classList.add("active");
-                            pendingItem.onclick = () => openSession(currentSession, data.session, pendingItem);
-                        }
-                    }
-                } catch (e) {
-                    console.warn("会话重命名失败", e);
-                }
-            }
-
-            if (full) {
-                await refreshSessions();
-            } else {
-                removePending();
-            }
         } catch (e) {
             loading.classList.remove("typing");
             loading.textContent = "网络错误";
-            removePending();
         }
     });
 
     /* ==================== 初始化 ==================== */
 
     async function init() {
-        createSession();
-        await refreshSessions();
+        await loadInitialHistory();
     }
 
     // 页面加载：有 token 则直接进入应用，否则展示登录页
