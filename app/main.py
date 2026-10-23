@@ -5,16 +5,30 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi.staticfiles import StaticFiles
 
-from .config import STATIC_DIR
+from .config import STATIC_DIR, CHAT_TEMPERATURE
 from .db import SessionLocal, Session, User
 from .schemas import ChatRequest, HistoryRequest, History, RenameResponse, RenameRequest, RegisterRequest, \
     RegisterResponse, LoginRequest, LoginResponse, ApiKeyTestResponse
 from .security import hash_password,verify_password,create_access_token, get_current_user
 from .llm import chat, chat_stream, test_api_key
+from .state import advance, load_state, save_state
 from .storage import Messages
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def _after_reply(m: Messages, user_id: int, user_message: str, reply: str, api_key=None):
+    """回复结束后台执行：摘要压缩 + 情绪状态推进，都不阻塞本轮响应。"""
+    try:
+        m.maybe_summarize(api_key=api_key)
+    except Exception as e:
+        print(f"后台摘要失败: {e}")
+    try:
+        state = advance(load_state(user_id), user_message, reply, api_key=api_key)
+        save_state(user_id, state)
+    except Exception as e:
+        print(f"后台状态更新失败: {e}")
 
 
 @app.get("/ping")
@@ -144,7 +158,7 @@ def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None,
     def gen():
         full = ""
         yield f"data: [START]{current_uuid}\n\n"
-        for chunk in chat_stream(m.get_context(), api_key=api_key):
+        for chunk in chat_stream(m.get_context(), api_key=api_key, temperature=CHAT_TEMPERATURE):
             yield chunk
             if chunk.startswith("data: [ERROR]"):
                 m.messages.pop()
@@ -159,8 +173,12 @@ def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None,
         if full:
             m.messages.append({"id": None,"role": "assistant", "content": full})
             m.save_messages()
-            # 回复流已结束，后台无感压缩超限历史，不阻塞本轮响应
-            threading.Thread(target=lambda: m.maybe_summarize(api_key=api_key), daemon=True).start()
+            # 回复流已结束，后台无感压缩历史并更新情绪状态，不阻塞本轮响应
+            threading.Thread(
+                target=_after_reply,
+                args=(m, user.id, user_message, full, api_key),
+                daemon=True,
+            ).start()
 
 
     return StreamingResponse(gen(), media_type="text/event-stream")

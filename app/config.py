@@ -16,6 +16,17 @@ JWT_EXPIRES_SECONDS = 7200
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
+# 生成温度：主模型负责像人一样说话，温度偏高；状态提取器固定 0，在 app/state.py 里写死
+CHAT_TEMPERATURE = float(os.getenv("CHAT_TEMPERATURE", "0.8"))
+
+# 提示词公平性预算（按字符算，不按 token）：
+#   固定骨架 400 + 记忆 800 = 1200
+#   原版：1 份 800 字摘要；最终版：4 份 × 200 字（画像 1 + 召回 3）
+BASE_PROMPT_CHARS = int(os.getenv("BASE_PROMPT_CHARS", "400"))
+MEMORY_CHAR_BUDGET = int(os.getenv("MEMORY_CHAR_BUDGET", "800"))
+SEGMENT_CHAR_LIMIT = int(os.getenv("SEGMENT_CHAR_LIMIT", "200"))
+SEGMENT_COUNT = int(os.getenv("SEGMENT_COUNT", "4"))
+
 DATA_DIR = BASE_DIR / "data"          # SQLite 数据库存放目录
 STATIC_DIR = BASE_DIR / "static"      # 前端静态资源
 DB_PATH = DATA_DIR / "chat.db"        # SQLite 数据库文件

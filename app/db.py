@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import create_engine, ForeignKey
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -41,5 +41,15 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(100), nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
+
+class UserState(Base):
+    """情绪（短周期）与关系（长周期）状态，按用户持久化。"""
+    __tablename__ = "user_states"
+    user_id = Column(ForeignKey("users.id"), primary_key=True)
+    emotion = Column(String(20), default="平静", nullable=False)
+    intensity = Column(Float, default=0.2, nullable=False)
+    closeness = Column(Float, default=0.4, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, nullable=False)
+
 
 Base.metadata.create_all(engine)
