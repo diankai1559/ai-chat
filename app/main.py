@@ -4,6 +4,7 @@ from starlette.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .cache import check_rate_limit
 from .config import STATIC_DIR, CHAT_TEMPERATURE, DAILY_MESSAGE_LIMIT
@@ -47,6 +48,12 @@ def _client_ip(request: Request) -> str:
 @app.get("/ping")
 def read_ping():
     return {"message": "pong"}
+
+
+@app.get("/", include_in_schema=False)
+def index_page():
+    """根路径直接返回页面，访问域名即可，不用带 /static/index.html。"""
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.post("/register", response_model=RegisterResponse)
 def register(req: RegisterRequest, request: Request):

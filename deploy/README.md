@@ -24,7 +24,7 @@ docker compose logs -f app
 
 首次构建会下载 CPU 版 torch 和 bge 向量模型，大约 1~2 GB，需要几分钟。默认走清华 PyPI 镜像；海外服务器可加 `--build-arg PIP_INDEX=https://pypi.org/simple` 换回官方源。
 
-访问 `http://服务器IP:8010/static/index.html`。
+访问 `http://服务器IP:8010/`（根路径会直接返回页面，不再需要 `/static/index.html`）。
 
 数据在命名卷 `xiaoman-data` 里，容器重建不会丢。
 
