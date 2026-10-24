@@ -20,7 +20,7 @@ from .cache import get_memory, get_recent, invalidate_memory, set_memory, set_re
 from .db import SessionLocal, Message, Segment as SegmentRow, UserState
 from .llm import summarize
 from .memory import MemoryStore
-from .memory.build import summarize_segment, update_profile
+from .memory.build import summarize_segment_tagged, update_profile
 from .memory.embeddings import embed_texts
 from .memory.store import Segment as MemorySegment
 from .prompt import build_system_prompt
@@ -185,7 +185,7 @@ class Messages:
                     db.commit()
             return
 
-        summary = summarize_segment(turns, api_key=api_key)
+        summary, tags = summarize_segment_tagged(turns, api_key=api_key)
         vectors = embed_texts([summary]) if summary else None
 
         with SessionLocal() as db:
@@ -198,6 +198,7 @@ class Messages:
             if seg is None:
                 return
             seg.summary = summary
+            seg.tags_json = json.dumps(tags, ensure_ascii=False)
             seg.embedding = json.dumps(vectors[0]) if vectors else None
             seg.status = "closed"
             seg.ended_at = datetime.now()
@@ -247,11 +248,16 @@ class Messages:
                 embedding = json.loads(row.embedding) if row.embedding else None
             except (TypeError, ValueError):
                 embedding = None
+            try:
+                tags = json.loads(row.tags_json) if row.tags_json else {}
+            except (TypeError, ValueError):
+                tags = {}
             segments.append(MemorySegment(
                 day=row.seq,
                 start_turn=row.started_at.timestamp() if row.started_at else 0,
                 end_turn=row.ended_at.timestamp() if row.ended_at else 0,
                 summary=row.summary,
+                tags=tags,
                 embedding=embedding,
             ))
 

@@ -22,7 +22,8 @@ from pathlib import Path
 
 from app import usage
 from app.config import CHAT_TEMPERATURE
-from app.memory import MemoryStore, Segment, summarize_segment, update_profile
+from app.memory import MemoryStore, Segment, update_profile
+from app.memory.build import summarize_segment_tagged
 from app.memory.build import memory_budget_report
 from app.memory.embeddings import embed_texts
 from app.prompt import PROMPT_VERSION, template_fingerprint
@@ -139,13 +140,14 @@ def main() -> None:
             time.sleep(random.uniform(args.min_wait, args.max_wait))
 
         # 场景结束：这一件事写成一段 ≤200 字记忆，入库并更新画像
-        summary = summarize_segment(scene_messages, api_key=api_key)
+        summary, tags = summarize_segment_tagged(scene_messages, api_key=api_key)
         vectors = embed_texts([summary]) if summary else None
         store.add(Segment(
             day=scene_index,
             start_turn=first_turn,
             end_turn=global_turn,
             summary=summary,
+            tags=tags,
             embedding=vectors[0] if vectors else None,
         ))
         store.profile = update_profile(store.profile, summary, api_key=api_key)
@@ -158,6 +160,7 @@ def main() -> None:
             "turns": len(scene["lines"]),
             "summary": summary,
             "summary_chars": len(summary),
+            "tags": tags,
             "profile_chars": len(store.profile),
         })
         print(

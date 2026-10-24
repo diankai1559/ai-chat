@@ -32,6 +32,7 @@ class Segment(Base):
     ended_at = Column(DateTime, nullable=True)
     turn_count = Column(Integer, default=0, nullable=False)
     summary = Column(Text, default="", nullable=False)
+    tags_json = Column(Text, default="{}", nullable=False)  # 时间/地点/人物/情绪/话题/未完成事项
     embedding = Column(Text, nullable=True)               # JSON 数组
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
