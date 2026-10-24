@@ -1,0 +1,7 @@
+# 用法：在 .env 里设置 DOMAIN=你的域名，然后
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+# Caddy 会自动申请并续期 Let's Encrypt 证书。
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8000
+}

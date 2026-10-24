@@ -2,19 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI 助手</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f3ead9">
+    <meta name="description" content="小满，一个会记得你的 AI 伙伴">
+    <title>小满 · 记得你的 AI 伙伴</title>
     <style>
         :root {
-            --bg: hsl(48, 45%, 95%);
-            --panel: hsl(48, 38%, 88%);
-            --line: hsl(45, 22%, 76%);
-            --txt: hsl(30, 20%, 22%);
-            --sub: hsl(30, 12%, 42%);
-            --accent: hsl(48, 50%, 78%);       /* 柔和米黄色 — 高亮态 */
-            --hover: hsl(48, 30%, 82%);
-            --pending: hsl(48, 40%, 91%);       /* 暖米色 — 等待智能命名 */
-            --field: hsl(48, 50%, 98%);
+            --bg: hsl(38, 44%, 94%);           /* 米黄底 */
+            --bg-deep: hsl(34, 38%, 90%);
+            --panel: hsl(35, 34%, 89%);
+            --line: hsl(34, 26%, 81%);
+            --txt: hsl(24, 26%, 19%);
+            --sub: hsl(28, 14%, 44%);
+            --accent: hsl(34, 55%, 78%);       /* 暖沙金 */
+            --accent-deep: hsl(24, 42%, 48%);  /* 陶土棕，用于强调 */
+            --hover: hsl(35, 36%, 85%);
+            --pending: hsl(38, 40%, 91%);
+            --field: hsl(40, 62%, 98%);
+            --shadow: 0 18px 44px hsla(30, 30%, 42%, 0.13);
+            --ring: 0 0 0 4px hsla(34, 55%, 70%, 0.22);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -23,13 +29,16 @@
         [hidden] { display: none !important; }
 
         body {
-            font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
-            background: var(--bg);
+            font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+            background:
+                radial-gradient(1200px 620px at 50% -16%, hsl(40, 60%, 97%), transparent 68%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
             color: var(--txt);
             height: 100vh;
             display: flex;
             overflow: hidden;
             user-select: none;
+            -webkit-font-smoothing: antialiased;
         }
 
         #app { display: flex; flex: 1; min-width: 0; }
@@ -671,6 +680,228 @@
             cursor: not-allowed;
             filter: none;
         }
+        /* ==================== 视觉升级 ==================== */
+
+        /* 顶部栏：品牌 + 用户菜单，替代原来的左侧栏 */
+        header {
+            height: 64px;
+            padding: 0 26px;
+            background: hsla(40, 62%, 98%, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--line);
+            position: relative;
+            z-index: 10;
+        }
+
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+        .brand-mark {
+            width: 34px; height: 34px;
+            flex: none;
+            display: grid; place-items: center;
+            border-radius: 11px;
+            background: linear-gradient(145deg, hsl(40, 70%, 90%), var(--accent));
+            color: hsl(24, 38%, 30%);
+            font-size: 17px;
+            box-shadow: 0 6px 16px hsla(30, 40%, 50%, 0.18);
+        }
+
+        .brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .brand-text h1 { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+
+        .brand-sub {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px; color: var(--sub);
+        }
+
+        .live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: hsl(140, 34%, 52%);
+            box-shadow: 0 0 0 0 hsla(140, 34%, 52%, 0.45);
+            animation: live-pulse 2.6s ease-in-out infinite;
+        }
+        @keyframes live-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 hsla(140, 34%, 52%, 0.4); }
+            50% { box-shadow: 0 0 0 5px hsla(140, 34%, 52%, 0); }
+        }
+
+        .user-wrap { position: relative; flex: none; }
+
+        header .user-cell {
+            width: auto;
+            padding: 7px 12px;
+            gap: 8px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+        }
+        header .user-cell:hover { border-color: var(--line); }
+
+        header .user-menu {
+            top: calc(100% + 8px);
+            right: 0;
+            left: auto;
+            bottom: auto;
+            min-width: 168px;
+            background: var(--field);
+            box-shadow: var(--shadow);
+        }
+
+        /* 欢迎页 */
+        .welcome .logo {
+            width: 64px; height: 64px;
+            border-radius: 20px;
+            font-size: 30px;
+            line-height: 64px;
+            background: linear-gradient(150deg, hsl(42, 74%, 92%), var(--accent));
+            box-shadow: 0 14px 34px hsla(30, 42%, 50%, 0.2);
+            animation: float-soft 5.5s ease-in-out infinite;
+        }
+        @keyframes float-soft {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .welcome h2 {
+            font-family: "Songti SC", "Noto Serif SC", "PingFang SC", serif;
+            font-size: 27px;
+            letter-spacing: .5px;
+        }
+
+        .welcome p { color: var(--sub); }
+
+        .suggestion {
+            background: var(--field);
+            border-color: var(--line);
+            padding: 9px 18px;
+            transition: transform .25s cubic-bezier(.2,.7,.3,1),
+                        background-color .3s ease,
+                        box-shadow .3s ease;
+        }
+        .suggestion:hover {
+            background: var(--field);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px hsla(30, 35%, 50%, 0.14);
+        }
+
+        /* 消息气泡 */
+        .messages { max-width: 760px; padding: 30px 22px 12px; gap: 18px; }
+
+        .msg {
+            max-width: 74%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14.5px;
+            line-height: 1.72;
+            box-shadow: 0 2px 10px hsla(30, 30%, 50%, 0.06);
+            animation: msg-in .34s cubic-bezier(.2,.7,.3,1);
+        }
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(7px) scale(.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .msg.user {
+            background: linear-gradient(150deg, hsl(38, 66%, 84%), var(--accent));
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 8px 20px hsla(30, 40%, 52%, 0.16);
+        }
+
+        .msg.ai {
+            background: var(--field);
+            border: 1px solid var(--line);
+            border-bottom-left-radius: 6px;
+        }
+
+        /* 输入区 */
+        .composer { padding: 8px 24px 20px; }
+        .composer-inner {
+            padding: 13px 16px 9px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px hsla(30, 30%, 50%, 0.08);
+            transition: border-color .3s ease, box-shadow .3s ease;
+        }
+        .composer-inner:focus-within {
+            border-color: hsl(34, 45%, 68%);
+            box-shadow: var(--ring), 0 10px 30px hsla(30, 30%, 50%, 0.1);
+        }
+
+        .hint { font-size: 11.5px; color: var(--sub); opacity: .85; }
+        .model-chip { opacity: .75; }
+
+        #send {
+            width: 34px; height: 34px;
+            background: linear-gradient(145deg, hsl(38, 68%, 82%), var(--accent));
+            transition: transform .22s cubic-bezier(.2,.7,.3,1),
+                        filter .25s ease,
+                        box-shadow .25s ease;
+        }
+        #send:not(:disabled):hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 7px 16px hsla(30, 40%, 50%, 0.22);
+        }
+
+        /* 登录卡片 */
+        .auth-card {
+            background: linear-gradient(180deg, hsl(40, 66%, 99%), var(--field));
+            box-shadow: var(--shadow);
+        }
+        .auth-logo {
+            background: linear-gradient(150deg, hsl(42, 74%, 92%), var(--accent));
+            box-shadow: 0 10px 24px hsla(30, 42%, 50%, 0.18);
+        }
+        .auth-btn {
+            background: linear-gradient(145deg, hsl(38, 68%, 82%), var(--accent));
+            transition: transform .2s ease, filter .25s ease, box-shadow .25s ease;
+        }
+        .auth-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px hsla(30, 40%, 50%, 0.2);
+        }
+
+        /* 滚动条 */
+        #output::-webkit-scrollbar { width: 8px; }
+        #output::-webkit-scrollbar-track { background: transparent; }
+        #output::-webkit-scrollbar-thumb {
+            background: hsla(34, 28%, 74%, 0.65);
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        #output::-webkit-scrollbar-thumb:hover { background-color: hsla(32, 34%, 62%, 0.85); }
+
+        /* 手机端 */
+        @media (max-width: 720px) {
+            header { height: 58px; padding: 0 14px; }
+            .brand { gap: 9px; }
+            .brand-mark { width: 30px; height: 30px; border-radius: 9px; font-size: 15px; }
+            .brand-sub { display: none; }
+            header .user-cell { padding: 6px 9px; }
+            .user-name { max-width: 76px; }
+
+            .messages { padding: 18px 14px 8px; gap: 14px; }
+            .msg { max-width: 86%; font-size: 14px; }
+
+            .composer { padding: 6px 12px calc(12px + env(safe-area-inset-bottom)); }
+            .composer-inner { border-radius: 18px; padding: 11px 12px 8px; }
+            .hint, .model-chip { display: none; }
+
+            .welcome h2 { font-size: 23px; }
+            .welcome .logo { width: 56px; height: 56px; line-height: 56px; font-size: 26px; }
+            .suggestions { max-width: 100%; }
+            .suggestion { font-size: 12.5px; padding: 8px 14px; }
+
+            .auth-card { padding: 28px 22px 24px; border-radius: 18px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .001ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -708,30 +939,27 @@
     <!-- 应用主体 -->
     <div id="app" hidden>
 
-    <!-- 左侧边栏 -->
-    <aside>
-        <div class="side-top">
-        </div>
-
-        <div class="chats-label" hidden>对话</div>
-        <ul class="session-list" id="session-list" hidden></ul>
-
-        <div class="side-bottom">
-            <button class="user-cell" id="user-menu-btn" type="button">
-                <span class="user-name" id="user-name">用户</span>
-                <span class="user-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            </button>
-            <div class="user-menu" id="user-menu" hidden>
-                <button class="user-menu-item" id="menu-config" type="button">设置</button>
-                <button class="user-menu-item" id="menu-logout" type="button">退出登录</button>
-            </div>
-        </div>
-    </aside>
-
-    <!-- 右侧主区域 -->
+    <!-- 主区域 -->
     <main>
         <header>
-            <h1 id="chat-title">小满</h1>
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">✦</div>
+                <div class="brand-text">
+                    <h1 id="chat-title">小满</h1>
+                    <span class="brand-sub"><i class="live-dot"></i>记得你们聊过的事</span>
+                </div>
+            </div>
+            <span class="spacer"></span>
+            <div class="user-wrap">
+                <button class="user-cell" id="user-menu-btn" type="button">
+                    <span class="user-name" id="user-name">用户</span>
+                    <span class="user-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                </button>
+                <div class="user-menu" id="user-menu" hidden>
+                    <button class="user-menu-item" id="menu-config" type="button">设置</button>
+                    <button class="user-menu-item" id="menu-logout" type="button">退出登录</button>
+                </div>
+            </div>
         </header>
 
         <!-- 消息区：欢迎页 与 消息列表 二选一 -->
@@ -739,12 +967,12 @@
             <!-- 新会话欢迎页 -->
             <section id="welcome" class="welcome">
                 <div class="logo">✦</div>
-                <h2>有什么可以帮到你？</h2>
-                <p>输入你的问题，或者从下面的示例开始</p>
+                <h2>我在呢</h2>
+                <p>随便聊点什么，你说过的事我会记着</p>
                 <div class="suggestions">
-                    <button class="suggestion" data-prompt="帮我总结下面这段文字：">帮我总结一段文字</button>
-                    <button class="suggestion" data-prompt="解释一下什么是闭包">解释一下什么是闭包</button>
-                    <button class="suggestion" data-prompt="用 Python 写一个简单的爬虫">用 Python 写一个爬虫</button>
+                    <button class="suggestion" data-prompt="今天有点累，想找人说说话">今天有点累</button>
+                    <button class="suggestion" data-prompt="跟你说件开心的事">跟你说件开心的事</button>
+                    <button class="suggestion" data-prompt="你还记得我上次跟你说过什么吗？">你还记得我上次说的吗</button>
                 </div>
             </section>
 
@@ -756,12 +984,9 @@
             <div class="composer-inner">
                 <textarea id="msg" rows="1" placeholder="输入消息，回车发送…" autocomplete="off"></textarea>
                 <div class="composer-bar">
-                    <button class="icon-btn" title="添加附件" type="button">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                    <span class="chip">默认权限</span>
+                    <span class="hint">Enter 发送 · Shift + Enter 换行</span>
                     <span class="spacer"></span>
-                    <span class="chip">deepseek</span>
+                    <span class="chip model-chip">DeepSeek</span>
                     <button class="chip chip-btn" id="api-key-chip" type="button" title="配置 API Key">API Key</button>
                     <button id="send" disabled title="发送">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>
@@ -936,6 +1161,7 @@
 
     document.getElementById("menu-config").addEventListener("click", () => {
         userMenu.hidden = true;
+        document.getElementById("api-key-chip").click();
     });
 
     document.getElementById("menu-logout").addEventListener("click", () => {

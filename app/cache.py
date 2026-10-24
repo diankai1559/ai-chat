@@ -135,13 +135,14 @@ def invalidate_memory(user_id):
     _call(lambda c: c.delete(f"chat:user:{user_id}:memory"), None)
 
 
-def check_rate_limit(ip, limit=20, window=60):
-    key = f"limit:ip:{ip}:chat"
+def check_rate_limit(key, limit=20, window=60):
+    """固定窗口计数。key 由调用方给出，例如 user:12 / register:1.2.3.4。"""
+    redis_key = f"limit:{key}"
 
     def op(client):
-        count = client.incr(key)
+        count = client.incr(redis_key)
         if count == 1:
-            client.expire(key, window)
+            client.expire(redis_key, window)
         return count <= limit
 
     return _call(op, True)  # Redis 不可用时放行，避免误伤用户

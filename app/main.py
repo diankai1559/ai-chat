@@ -1,11 +1,12 @@
 import threading
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from starlette.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from fastapi.staticfiles import StaticFiles
 
-from .config import STATIC_DIR, CHAT_TEMPERATURE
+from .cache import check_rate_limit
+from .config import STATIC_DIR, CHAT_TEMPERATURE, DAILY_MESSAGE_LIMIT
 from .db import SessionLocal, User
 from .schemas import ChatRequest, HistoryRequest, History, RegisterRequest, \
     RegisterResponse, LoginRequest, LoginResponse, ApiKeyTestResponse
@@ -35,12 +36,22 @@ def _warm_up(user_id: int):
         print(f"预热失败: {e}")
 
 
+def _client_ip(request: Request) -> str:
+    """反向代理后取真实 IP；直连时回落到 socket 地址。"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @app.get("/ping")
 def read_ping():
     return {"message": "pong"}
 
 @app.post("/register", response_model=RegisterResponse)
-def register(req: RegisterRequest):
+def register(req: RegisterRequest, request: Request):
+    if not check_rate_limit(f"register:{_client_ip(request)}", limit=10, window=3600):
+        raise HTTPException(status_code=429, detail="注册太频繁，请稍后再试")
     with SessionLocal() as db:
         result = db.execute(
             select(User).where(User.username == req.username)
@@ -61,7 +72,9 @@ def register(req: RegisterRequest):
 
 
 @app.post("/login", response_model=LoginResponse)
-def login(req: LoginRequest):
+def login(req: LoginRequest, request: Request):
+    if not check_rate_limit(f"login:{_client_ip(request)}", limit=30, window=60):
+        raise HTTPException(status_code=429, detail="登录尝试太频繁，请稍后再试")
     with SessionLocal() as db:
         result = db.execute(
             select(User).where(User.username == req.username)
@@ -102,6 +115,9 @@ def get_chat_history(req: HistoryRequest, user: User = Depends(get_current_user)
 
 @app.post("/chat/stream")
 def chat_stream_api(req: ChatRequest, api_key: str | None = Header(default=None, alias="X-API-Key"), user: User = Depends(get_current_user)):
+    # 免费公网服务：单用户每天的消息额度，防止服务端 Key 被刷
+    if not check_rate_limit(f"user:{user.id}:daily", limit=DAILY_MESSAGE_LIMIT, window=86400):
+        raise HTTPException(status_code=429, detail="今天的消息额度用完了，明天再来找我吧")
     m = Messages(user_id=user.id)
     m.load_messages()
 

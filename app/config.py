@@ -19,6 +19,9 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 # 生成温度：主模型负责像人一样说话，温度偏高；状态提取器固定 0，在 app/state.py 里写死
 CHAT_TEMPERATURE = float(os.getenv("CHAT_TEMPERATURE", "0.8"))
 
+# 公网免费服务防滥用：单用户每天的消息额度（Redis 不可用时放行）
+DAILY_MESSAGE_LIMIT = int(os.getenv("DAILY_MESSAGE_LIMIT", "200"))
+
 # 提示词公平性预算（按字符算，不按 token）：
 #   固定骨架 400 + 记忆 800 = 1200
 #   原版：1 份 800 字摘要；最终版：4 份 × 200 字（画像 1 + 召回 3）
