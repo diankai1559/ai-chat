@@ -8,8 +8,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# libgomp1 是 CPU 版 torch 的运行时依赖
-RUN apt-get update \
+# libgomp1 是 CPU 版 torch 的运行时依赖；国内直连 deb.debian.org 很慢，先换清华源
+RUN (sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true) \
+    && apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
