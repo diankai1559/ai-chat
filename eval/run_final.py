@@ -20,15 +20,15 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from app import usage
+from app.infrastructure import usage
 from app.config import CHAT_TEMPERATURE
-from app.memory import MemoryStore, Segment, update_profile
-from app.memory.build import summarize_segment_tagged
-from app.memory.build import memory_budget_report
-from app.memory.embeddings import embed_texts
-from app.prompt import PROMPT_VERSION, template_fingerprint
-from app.state import EmotionState, advance
-from app.storage import Messages
+from app.infrastructure.memory import MemoryStore, Segment, update_profile
+from app.infrastructure.memory.build import summarize_segment_tagged
+from app.infrastructure.memory.build import memory_budget_report
+from app.infrastructure.memory.embeddings import embed_texts
+from app.application.prompt import PROMPT_VERSION, template_fingerprint
+from app.application.state import EmotionState, advance
+from app.application.chat_service import Messages
 
 from eval.run_baseline import stream_reply
 

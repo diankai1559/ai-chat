@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from ..config import MEMORY_CHAR_BUDGET, SEGMENT_CHAR_LIMIT
+from ...config import MEMORY_CHAR_BUDGET, SEGMENT_CHAR_LIMIT
 from ..llm import chat, chat_json
 
 SEGMENT_PROMPT = """把下面这一天的对话压缩成一段记忆，供以后回忆。

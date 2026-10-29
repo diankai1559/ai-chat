@@ -22,10 +22,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from app import usage
-from app.llm import chat
-from app.memory.store import MemoryStore
-from app.prompt import PROMPT_VERSION, build_system_prompt, template_fingerprint
+from app.infrastructure import usage
+from app.infrastructure.llm import chat
+from app.infrastructure.memory.store import MemoryStore
+from app.application.prompt import PROMPT_VERSION, build_system_prompt, template_fingerprint
 
 from eval.probe_set import CONSISTENCY_IDS, build_probes
 

@@ -10,7 +10,7 @@ import re
 import threading
 from dataclasses import dataclass, field
 
-from ..config import SEGMENT_RETRIEVE_TOP_K
+from ...config import SEGMENT_RETRIEVE_TOP_K
 
 VECTOR_WEIGHT = 0.50
 BM25_WEIGHT = 0.25

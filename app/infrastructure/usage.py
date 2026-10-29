@@ -2,7 +2,7 @@
 
 只记 token，不折算金额——价格会变，硬编码容易过时，需要时按当时的单价乘一下即可。
 
-查看汇总：python -m app.usage
+查看汇总：python -m app.infrastructure.usage
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import threading
 from collections import defaultdict
 from datetime import datetime
 
-from .config import DATA_DIR
+from ..config import DATA_DIR
 
 USAGE_PATH = DATA_DIR / "usage.jsonl"
 _lock = threading.Lock()

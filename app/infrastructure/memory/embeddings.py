@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import threading
 
-from ..config import EMBEDDING_MODEL, RAG_MODEL_DIR
+from ...config import EMBEDDING_MODEL, RAG_MODEL_DIR
 
 # 国内直连 huggingface 不稳定，默认走镜像
 if not os.environ.get("HF_ENDPOINT"):

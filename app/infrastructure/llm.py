@@ -1,7 +1,7 @@
 import json
 import os
 import requests
-from .config import DEEPSEEK_API_KEY, MEMORY_CHAR_BUDGET
+from ..config import DEEPSEEK_API_KEY, MEMORY_CHAR_BUDGET
 from .usage import record
 url = "https://api.deepseek.com/chat/completions"
 

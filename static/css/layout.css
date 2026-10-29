@@ -1,0 +1,329 @@
+/* =========================================================
+   layout.css — 页面骨架、顶部栏与响应式
+   负责「东西摆在哪」：应用外壳、登录页容器、顶部栏、用户菜单、欢迎页、
+   消息区与输入区的外框，以及全部断点（720 / 1024）和低动效偏好。
+   组件自己的样子（气泡、按钮）在 chat.css / base.css。
+
+   注意：本文件在 index.html 里最后加载。
+   因为断点里要覆盖 .msg / .messages / .hint 这些写在 chat.css 的基础样式，
+   同优先级下只有「后加载」才压得住，调整引用顺序要连带检查这里。
+   ========================================================= */
+
+/* ---------- 应用外壳 ---------- */
+#app {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    /* --kb 是手机键盘高度，由 js/ui.js 的 syncViewport() 实时写入；
+       加 transition 让输入区平滑上移，而不是瞬间弹跳 */
+    padding-bottom: var(--kb, 0px);
+    transition: padding-bottom .22s cubic-bezier(.2,.7,.3,1);
+}
+
+/* 登录页铺满视口并让卡片居中 */
+#auth-view {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(1100px 560px at 50% -12%, hsl(48, 55%, 92%), transparent),
+        var(--bg);
+}
+
+/* ---------- 顶部栏：品牌 + 用户菜单（项目已取消左侧会话列表） ---------- */
+header {
+    height: 64px;
+    padding: 0 26px;
+    display: flex;
+    align-items: center;
+    background: hsla(40, 62%, 98%, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.brand-mark {
+    width: 34px; height: 34px;
+    flex: none;
+    display: grid; place-items: center;
+    border-radius: 11px;
+    background: linear-gradient(145deg, hsl(40, 70%, 90%), var(--accent));
+    color: hsl(24, 38%, 30%);
+    font-size: 17px;
+    box-shadow: 0 6px 16px hsla(30, 40%, 50%, 0.18);
+}
+
+.brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.brand-text h1 { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+
+.brand-sub {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--sub);
+}
+
+/* 副标题前的绿色小点，暗示「她还醒着」 */
+.live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: hsl(140, 34%, 52%);
+    box-shadow: 0 0 0 0 hsla(140, 34%, 52%, 0.45);
+    animation: live-pulse 2.6s ease-in-out infinite;
+}
+
+/* 小绿点向外扩散的呼吸光晕 */
+@keyframes live-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(140, 34%, 52%, 0.4); }
+    50% { box-shadow: 0 0 0 5px hsla(140, 34%, 52%, 0); }
+}
+
+/* ---------- 右上角用户菜单 ---------- */
+.user-wrap { position: relative; flex: none; }
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--sub);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color .35s ease, color .35s ease, border-color .35s ease;
+}
+.user-cell:hover { background: var(--hover); color: var(--txt); border-color: var(--line); }
+
+.user-name {
+    flex: 1;
+    min-width: 0;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+/* 用户名右侧的三个点，暗示这里可以点开 */
+.user-dots {
+    flex: none;
+    display: inline-flex;
+    gap: 2.5px;
+    align-items: center;
+}
+.user-dots i {
+    width: 3.5px;
+    height: 3.5px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.user-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 168px;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: var(--shadow);
+    z-index: 20;
+    animation: menu-in .22s cubic-bezier(.2,.7,.3,1);
+}
+
+/* 菜单与弹窗共用的入场位移（base.css 的 .modal-card 也引用它） */
+@keyframes menu-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.user-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--sub);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color .3s ease, color .3s ease;
+}
+.user-menu-item:hover { background: var(--hover); color: var(--txt); }
+
+/* ---------- 主区域 ---------- */
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* 消息滚动容器：欢迎页和消息列表都在里面二选一 */
+#output {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;   /* 到底后不再带着整页滚动 */
+}
+
+/* 暖色细滚动条（只写 webkit 规则，别和 scrollbar-width 混用） */
+#output::-webkit-scrollbar { width: 8px; }
+#output::-webkit-scrollbar-track { background: transparent; }
+#output::-webkit-scrollbar-thumb {
+    background: hsla(34, 28%, 74%, 0.65);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+#output::-webkit-scrollbar-thumb:hover { background-color: hsla(32, 34%, 62%, 0.85); }
+
+/* ---------- 欢迎页（还没有历史消息时） ---------- */
+.welcome {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+}
+
+.welcome .logo {
+    width: 64px; height: 64px;
+    border-radius: 20px;
+    font-size: 30px;
+    line-height: 64px;
+    background: linear-gradient(150deg, hsl(42, 74%, 92%), var(--accent));
+    box-shadow: 0 14px 34px hsla(30, 42%, 50%, 0.2);
+    margin-bottom: 18px;
+    animation: float-soft 5.5s ease-in-out infinite;
+}
+
+/* 顶部图标缓慢上下浮动 */
+@keyframes float-soft {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.welcome h2 {
+    font-family: "Songti SC", "Noto Serif SC", "PingFang SC", serif;
+    font-size: 27px;
+    letter-spacing: .5px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.welcome p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--sub);
+}
+
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 22px;
+    max-width: 520px;
+}
+
+/* ---------- 输入区外框 ---------- */
+.composer { padding: 8px 24px 20px; }
+
+.composer-inner {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 13px 16px 9px;
+    box-shadow: 0 10px 30px hsla(30, 30%, 50%, 0.08);
+    transition: border-color .3s ease, box-shadow .3s ease;
+}
+
+/* 输入框获得焦点时整块卡片一起亮起 */
+.composer-inner:focus-within {
+    border-color: hsl(34, 45%, 68%);
+    box-shadow: var(--ring), 0 10px 30px hsla(30, 30%, 50%, 0.1);
+}
+
+.composer-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.spacer { flex: 1; }
+
+/* =========================================================
+   响应式：所有断点集中在这里，改宽度阈值不用翻其他文件
+   ========================================================= */
+
+/* 手机端：压缩顶部栏、放大气泡占比、适配安全区 */
+@media (max-width: 720px) {
+    header { height: 58px; padding: 0 14px; }
+    .brand { gap: 9px; }
+    .brand-mark { width: 30px; height: 30px; border-radius: 9px; font-size: 15px; }
+    .brand-sub { display: none; }
+    .user-cell { padding: 6px 9px; }
+    .user-name { max-width: 76px; }
+
+    .messages { padding: 18px 14px 8px; gap: 14px; }
+    .msg { max-width: 86%; font-size: 14px; }
+
+    .composer { padding: 6px 12px calc(12px + env(safe-area-inset-bottom)); }
+    .composer-inner { border-radius: 18px; padding: 11px 12px 8px; }
+    .hint, .model-chip { display: none; }
+
+    .welcome h2 { font-size: 23px; }
+    .welcome .logo { width: 56px; height: 56px; line-height: 56px; font-size: 26px; }
+    .suggestions { max-width: 100%; }
+    .suggestion { font-size: 12.5px; padding: 8px 14px; }
+
+    .auth-card { padding: 28px 22px 24px; border-radius: 18px; }
+}
+
+/* 桌面端：把内容区和字号一起放大，避免像被拉宽的手机页 */
+@media (min-width: 1024px) {
+    header { height: 70px; padding: 0 40px; }
+    .brand-mark { width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+    .brand-text h1 { font-size: 16px; }
+    .brand-sub { font-size: 12px; }
+
+    .messages { max-width: 880px; padding: 42px 32px 18px; gap: 20px; }
+    .msg { max-width: 68%; font-size: 15px; padding: 13px 18px; }
+
+    .composer { padding: 10px 32px 26px; }
+    .composer-inner { max-width: 880px; padding: 15px 18px 10px; }
+    #msg { font-size: 15px; }
+
+    .welcome h2 { font-size: 32px; }
+    .welcome p { font-size: 15px; }
+    .welcome .logo { width: 72px; height: 72px; line-height: 72px; font-size: 34px; }
+
+    .auth-card { max-width: 420px; padding: 38px 36px 32px; }
+}
+
+/* 用户在系统里关掉动画时，所有过渡几乎立即完成 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+    }
+}

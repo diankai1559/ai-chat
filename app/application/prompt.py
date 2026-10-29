@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 
-from .config import BASE_PROMPT_CHARS, MEMORY_CHAR_BUDGET, SEGMENT_CHAR_LIMIT, SEGMENT_COUNT
+from ..config import BASE_PROMPT_CHARS, MEMORY_CHAR_BUDGET, SEGMENT_CHAR_LIMIT, SEGMENT_COUNT
 
 PROMPT_VERSION = "persona-v4"
 

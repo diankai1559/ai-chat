@@ -16,8 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
-from .db import SessionLocal, UserState
-from .llm import chat_json
+from ..infrastructure import repositories as repo
+from ..infrastructure.llm import chat_json
 
 EMOTIONS = ("开心", "平静", "低落", "焦虑", "生气", "疲惫", "亲近", "兴奋")
 
@@ -162,26 +162,23 @@ def advance(prev: EmotionState, user_message: str, assistant_reply: str,
 
 def load_state(user_id: int) -> EmotionState:
     """读取用户的持久化状态；没有记录时返回初始状态。"""
-    with SessionLocal() as db:
-        row = db.get(UserState, user_id)
-        if row is None:
-            return EmotionState()
-        return EmotionState(
-            emotion=row.emotion or "",
-            intensity=row.intensity if row.intensity is not None else 0.0,
-            closeness=row.closeness if row.closeness is not None else 0.4,
-            updated_at=row.updated_at or datetime.now(),
-        )
+    row = repo.load_emotion_state(user_id)
+    if row is None:
+        return EmotionState()
+    return EmotionState(
+        emotion=row["emotion"] or "",
+        intensity=row["intensity"] if row["intensity"] is not None else 0.0,
+        closeness=row["closeness"] if row["closeness"] is not None else 0.4,
+        updated_at=row["updated_at"] or datetime.now(),
+    )
 
 
 def save_state(user_id: int, state: EmotionState) -> None:
-    with SessionLocal() as db:
-        row = db.get(UserState, user_id)
-        if row is None:
-            row = UserState(user_id=user_id)
-            db.add(row)
-        row.emotion = state.emotion
-        row.intensity = state.intensity
-        row.closeness = state.closeness
-        row.updated_at = state.updated_at
-        db.commit()
+    """把状态写回 user_states；没有记录时补一条。"""
+    repo.save_emotion_state(
+        user_id,
+        emotion=state.emotion,
+        intensity=state.intensity,
+        closeness=state.closeness,
+        updated_at=state.updated_at,
+    )

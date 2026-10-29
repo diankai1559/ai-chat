@@ -1,0 +1,631 @@
+/* =========================================================
+   brain.css — 记忆大脑（深空神经网络风格）
+   深蓝背景 + 加色发光点云，配色与布局参考 WeSmartFlow 的知识大脑页。
+   结构：画布 / 标签层 / 页头 / 统计卡 / 缩放条 / 分组导航 / 详情抽屉 / 空状态。
+   ========================================================= */
+
+/* ---------- 1. 主题令牌 ---------- */
+:root {
+    --ink: #02050d;
+    --ink-2: #081934;
+    --ink-3: #12346e;
+    --txt: #eff5ff;
+    --txt-dim: #adbedb;
+    --txt-faint: #8597b8;
+    --accent: #8ab4ff;
+    --gold: #ffe39a;
+    --line: rgb(163 202 255 / 20%);
+    --glass: rgb(4 13 31 / 56%);
+    --glass-deep: rgb(4 13 31 / 64%);
+    --ease: cubic-bezier(.2, .7, .3, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    height: 100vh;
+    overflow: hidden;
+    background: var(--ink);
+    color: var(--txt);
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+}
+@supports (height: 100dvh) { body { height: 100dvh; } }
+
+button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+a { -webkit-tap-highlight-color: transparent; }
+
+/* ---------- 2. 页面底色：中心蓝光 + 弥散光斑 + 细网格 ---------- */
+.brain-page {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 560px;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 46%, var(--ink-3) 0%, var(--ink-2) 40%, var(--ink) 80%);
+}
+
+/* 会缓慢漂移的彩色雾光，给深色底一点「活气」 */
+.brain-page::before {
+    position: absolute;
+    z-index: 0;
+    inset: -15%;
+    content: "";
+    pointer-events: none;
+    opacity: .9;
+    filter: blur(30px);
+    background:
+        radial-gradient(circle at 45% 48%, rgb(54 169 255 / 19%), transparent 22%),
+        radial-gradient(circle at 61% 40%, rgb(148 94 255 / 12%), transparent 22%),
+        radial-gradient(circle at 48% 72%, rgb(64 231 213 / 8%), transparent 20%);
+    animation: drift 15s ease-in-out infinite alternate;
+}
+
+/* 极细的点阵，只在中心可见，往边缘淡出 */
+.brain-page::after {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    content: "";
+    pointer-events: none;
+    opacity: .32;
+    background-image: radial-gradient(rgb(165 198 255 / 22%) .65px, transparent .8px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at center, #000 0%, transparent 77%);
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 77%);
+}
+
+@keyframes drift {
+    to { transform: translate3d(2%, -2%, 0) scale(1.08); }
+}
+
+/* ---------- 3. 画布与标签层 ---------- */
+.canvas {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;            /* 交给 OrbitControls 处理旋转与缩放 */
+}
+.canvas:active { cursor: grabbing; }
+
+/* three.js 生成的 canvas：铺满容器，像素尺寸由渲染器自己算 */
+.canvas canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.labels {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;          /* 标签不挡点击，点到的仍然是光点 */
+}
+
+.node-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 2px 8px;
+    border: 1px solid rgb(160 200 255 / 18%);
+    border-radius: 999px;
+    background: rgb(4 13 31 / 55%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #dbe8ff;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;
+    transition: opacity .2s linear;
+}
+
+/* ---------- 4. 页头 ---------- */
+header {
+    position: absolute;
+    z-index: 3;
+    top: 36px;
+    left: 43px;
+    pointer-events: none;
+}
+header p {
+    margin: 0 0 10px;
+    color: #a6c7ff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .21em;
+}
+header h1 {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -.06em;
+    text-shadow: 0 0 30px rgb(120 170 255 / 28%);
+}
+header span {
+    display: block;
+    margin-top: 9px;
+    max-width: 420px;
+    color: var(--txt-dim);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* ---------- 5. 统计卡 ---------- */
+.stats {
+    position: absolute;
+    z-index: 3;
+    top: 76px;
+    right: 42px;
+    display: flex;
+    gap: 26px;
+    padding: 13px 18px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: #9eafcd;
+    font-size: 11px;
+    pointer-events: none;
+}
+.stats b {
+    display: block;
+    margin-bottom: 3px;
+    color: #fff;
+    font-size: 19px;
+    line-height: 1.2;
+}
+.stats .frontier-stat b {
+    color: #fff0bd;
+    text-shadow: 0 0 14px rgb(255 216 122 / 58%);
+}
+
+/* ---------- 6. 缩放条 ---------- */
+.zoom-controls {
+    position: absolute;
+    z-index: 5;
+    top: 156px;
+    right: 42px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    overflow: hidden;
+    border: 1px solid rgb(193 219 255 / 24%);
+    border-radius: 10px;
+    background: var(--glass-deep);
+    backdrop-filter: blur(13px);
+    -webkit-backdrop-filter: blur(13px);
+}
+.zoom-controls button {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 7px;
+    color: #d9e7ff;
+    background: transparent;
+    font-size: 19px;
+}
+.zoom-controls button:hover { background: rgb(125 163 235 / 16%); }
+.zoom-controls .zoom-label {
+    width: 52px;
+    border-inline: 1px solid rgb(193 219 255 / 18%);
+    border-radius: 0;
+    font-size: 11px;
+}
+.zoom-controls input {
+    width: 96px;
+    accent-color: #86b7ff;
+    cursor: pointer;
+}
+
+/* ---------- 7. 分组导航 ---------- */
+nav {
+    position: absolute;
+    z-index: 4;
+    top: 182px;
+    left: 42px;
+    display: grid;
+    gap: 5px;
+    width: 158px;
+}
+nav button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 8px 9px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #acbdd9;
+    background: transparent;
+    text-align: left;
+    font-size: 12.5px;
+    transition: .2s;
+}
+nav button:hover,
+nav button.active {
+    color: #f8fbff;
+    border-color: rgb(176 210 255 / 20%);
+    background: rgb(123 160 227 / 13%);
+}
+nav i {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 50%;
+    box-shadow: 0 0 13px currentColor;
+}
+nav b {
+    margin-left: auto;
+    color: #8294b7;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* ---------- 8. 底部说明 ---------- */
+.legend,
+.hint,
+.caption {
+    position: absolute;
+    z-index: 3;
+    font-size: 11px;
+    pointer-events: none;
+}
+.legend {
+    bottom: 31px;
+    left: 43px;
+    color: #8fa2c2;
+}
+.legend i {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin: 0 7px 1px 0;
+    border-radius: 50%;
+    background: #8ab4ff;
+    box-shadow: 0 0 12px #8ab4ff;
+}
+.legend span { opacity: .38; }
+.legend em {
+    color: #ffe8a2;
+    font-style: normal;
+    text-shadow: 0 0 12px #ffe8a2;
+}
+.hint {
+    right: 43px;
+    bottom: 31px;
+    color: var(--txt-faint);
+}
+.caption {
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 13px;
+    border: 1px solid rgb(180 210 255 / 16%);
+    border-radius: 99px;
+    color: #bdcde8;
+    background: rgb(5 15 36 / 56%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* ---------- 9. 返回对话 ---------- */
+.back-link {
+    position: absolute;
+    z-index: 6;
+    top: 24px;
+    right: 42px;
+    padding: 6px 13px;
+    border: 1px solid rgb(193 219 255 / 22%);
+    border-radius: 999px;
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #b9c9ea;
+    font-size: 12px;
+    text-decoration: none;
+    transition: .25s;
+}
+.back-link:hover {
+    color: #f8fbff;
+    border-color: rgb(176 210 255 / 34%);
+    background: rgb(123 160 227 / 16%);
+}
+
+/* ---------- 10. 详情抽屉（桌面右侧） ---------- */
+.region-drawer {
+    position: absolute;
+    z-index: 10;
+    top: 214px;
+    right: 42px;
+    width: 348px;
+    max-height: calc(100% - 252px);
+    padding: 23px 17px 17px;
+    border: 1px solid rgb(193 219 255 / 30%);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgb(22 46 88 / 96%), rgb(4 13 31 / 97%));
+    box-shadow: 0 28px 75px rgb(0 0 0 / 52%);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    overflow: auto;
+    transform: translateX(24px);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform .32s var(--ease), opacity .28s var(--ease), visibility .28s;
+}
+.region-drawer.open {
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+}
+.region-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #93a9cc;
+    font-size: 17px;
+    line-height: 1;
+}
+.region-close:hover { background: rgb(142 180 244 / 14%); color: #fff; }
+
+.region-drawer > small {
+    display: block;
+    margin-bottom: 8px;
+    color: #8cb5ff;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .2em;
+}
+.region-drawer h2 {
+    margin: 0 0 6px;
+    color: #eaf2ff;
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    padding-right: 24px;
+}
+.detail-sub {
+    margin: 0 0 14px;
+    color: #9ab0d3;
+    font-size: 11.5px;
+    line-height: 1.55;
+}
+.detail-body {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* 记忆条目：左边一颗发光点，中间两行文字，右侧轮数 */
+.mem-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid rgb(110 144 205 / 18%);
+    border-radius: 11px;
+    background: rgb(110 144 205 / 8%);
+    color: #d8e8ff;
+    text-align: left;
+    transition: .24s;
+}
+.mem-item:hover {
+    border-color: rgb(166 203 255 / 26%);
+    background: rgb(126 165 231 / 16%);
+    transform: translateY(-1px);
+}
+.mem-item.lit {
+    border-color: rgb(255 223 143 / 24%);
+    background: rgb(255 213 104 / 9%);
+}
+.mem-item i {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-top: 7px;
+    border-radius: 50%;
+    box-shadow: 0 0 12px currentColor;
+}
+.mem-item span { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.mem-item strong {
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.mem-item small {
+    color: #9cafcf;
+    font-size: 11px;
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.mem-item b {
+    flex: none;
+    color: #8294b7;
+    font-size: 10.5px;
+    font-weight: 500;
+    margin-top: 3px;
+}
+
+/* 完整记忆：保留摘要的三行换行 */
+.mem-full {
+    padding: 12px 13px;
+    border: 1px solid rgb(110 144 205 / 18%);
+    border-radius: 11px;
+    background: rgb(110 144 205 / 7%);
+    color: #d7e5ff;
+    font-size: 12px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    user-select: text;
+}
+.profile-full {
+    padding: 13px 14px;
+    border: 1px solid rgb(110 144 205 / 18%);
+    border-radius: 11px;
+    background: rgb(110 144 205 / 7%);
+    color: #d7e5ff;
+    font-size: 12px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    user-select: text;
+}
+.detail-heading {
+    margin: 10px 0 2px;
+    color: #93a9cc;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .16em;
+}
+.tag-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgb(142 180 244 / 10%);
+    color: #a9bbd9;
+    font-size: 10.5px;
+    line-height: 1.5;
+}
+.back-to-group {
+    align-self: flex-start;
+    margin-bottom: 4px;
+    padding: 5px 9px;
+    border: 1px solid rgb(193 219 255 / 20%);
+    border-radius: 7px;
+    background: transparent;
+    color: #90b6ff;
+    font-size: 11px;
+}
+.back-to-group:hover { background: rgb(142 180 244 / 12%); color: #fff; }
+
+/* ---------- 11. 空状态 / 未登录提示 ---------- */
+.empty {
+    position: absolute;
+    z-index: 4;
+    top: 50%;
+    left: 50%;
+    width: min(360px, calc(100% - 48px));
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.empty strong {
+    display: block;
+    color: #90b6ff;
+    font-size: 32px;
+    text-shadow: 0 0 30px #6995ff;
+}
+.empty h2 {
+    margin: 14px 0 8px;
+    color: #eaf2ff;
+    font-size: 21px;
+    font-weight: 650;
+}
+.empty p {
+    color: #aab9d8;
+    font-size: 13px;
+    line-height: 1.7;
+}
+.empty-link {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 9px 17px;
+    border: 1px solid rgb(193 219 255 / 26%);
+    border-radius: 9px;
+    background: rgb(123 160 227 / 14%);
+    color: #dbe8ff;
+    font-size: 12.5px;
+    text-decoration: none;
+    transition: .24s;
+}
+.empty-link:hover { background: rgb(123 160 227 / 24%); color: #fff; }
+
+/* ---------- 12. 响应式 ---------- */
+
+/* 手机：页头缩小，隐藏统计/图例/提示/胶囊，导航变成底部四格 */
+@media (max-width: 800px) {
+    header { top: 22px; left: 18px; right: 96px; }
+    header p { font-size: 8.5px; letter-spacing: .16em; margin-bottom: 7px; }
+    header h1 { font-size: 26px; }
+    header span { margin-top: 6px; max-width: 100%; font-size: 12px; line-height: 1.5; }
+
+    .back-link { top: 20px; right: 14px; padding: 5px 10px; font-size: 11px; }
+
+    .stats,
+    .legend,
+    .hint,
+    .caption { display: none; }
+
+    .zoom-controls {
+        top: auto;
+        right: 14px;
+        bottom: 96px;
+    }
+    .zoom-controls input { width: 74px; }
+
+    nav {
+        top: auto;
+        bottom: 14px;
+        left: 14px;
+        width: calc(100% - 28px);
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+    }
+    nav button {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 7px 6px;
+        font-size: 11px;
+    }
+    nav b { margin-left: 0; font-size: 10px; }
+
+    /* 详情改成底部抽屉 */
+    .region-drawer {
+        top: auto;
+        left: 14px;
+        right: 14px;
+        bottom: 92px;
+        width: auto;
+        max-height: calc(100% - 190px);
+        transform: translateY(14px);
+    }
+    .region-drawer.open { transform: translateY(0); }
+
+    .node-label { font-size: 10px; padding: 1px 6px; }
+}
+
+/* 平板/桌面：稍微放大字号 */
+@media (min-width: 1024px) {
+    .node-label { font-size: 11.5px; }
+}
+
+/* 尊重系统的「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+    }
+}

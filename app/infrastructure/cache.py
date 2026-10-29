@@ -6,7 +6,7 @@ import redis
 from redis.backoff import NoBackoff
 from redis.retry import Retry
 
-from .config import REDIS_HOST, REDIS_PORT
+from ..config import REDIS_HOST, REDIS_PORT
 
 # Redis 只是加速手段，绝不允许拖慢主流程。核心策略：
 #   1) 关闭 redis-py 内置重试（redis 8 默认会重试多次，把 0.5s 超时拖成 ~9s）；

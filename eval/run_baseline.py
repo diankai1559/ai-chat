@@ -21,12 +21,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from app import usage
+from app.infrastructure import usage
 from app.config import CHAT_TEMPERATURE
-from app.llm import chat_stream
-from app.prompt import PROMPT_VERSION, template_fingerprint
-from app.state import EmotionState, advance
-from app.storage import Messages
+from app.infrastructure.llm import chat_stream
+from app.application.prompt import PROMPT_VERSION, template_fingerprint
+from app.application.state import EmotionState, advance
+from app.application.chat_service import Messages
 
 HERE = Path(__file__).resolve().parent
 DIALOGUE = HERE / "dialogue.txt"

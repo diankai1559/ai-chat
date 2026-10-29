@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 手机适配：viewport-fit=cover 让 env(safe-area-inset-*) 生效 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#02050d">
+    <meta name="description" content="小满的记忆大脑：把长期记忆画成一片会呼吸的神经网络">
+    <title>记忆大脑 · 小满</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/static/css/brain.css">
+
+    <!-- three.js 走本地文件，不依赖任何 CDN；addons 与主包共用同一份 three -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "/static/vendor/three.module.min.js",
+                "three/addons/": "/static/vendor/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="brain-page">
+    <!-- 3D 画布容器：WebGL 渲染到这里，背景与光晕由 CSS 负责 -->
+    <div class="canvas" id="scene"></div>
+
+    <!-- 标签层：把「话题 · 段数」跟着节点投影到屏幕上，保持文字清晰 -->
+    <div class="labels" id="labels"></div>
+
+    <header>
+        <p>XIAOMAN · LONG-TERM MEMORY CORTEX</p>
+        <h1>我的记忆大脑</h1>
+        <span id="headerSub">正在读取她记得的每一件事…</span>
+    </header>
+
+    <!-- 统计卡：片段 / 标签 / 连接 / 待办 -->
+    <div class="stats" id="stats"></div>
+
+    <!-- 缩放条：− / 滑杆 / 百分比 / + -->
+    <div class="zoom-controls" aria-label="大脑缩放">
+        <button id="zoomOut" type="button" title="缩小">−</button>
+        <input id="zoomRange" type="range" min="40" max="260" step="10" value="100" aria-label="记忆大脑缩放尺度">
+        <button id="zoomLabel" class="zoom-label" type="button" title="回到全脑视角">100%</button>
+        <button id="zoomIn" type="button" title="放大">+</button>
+    </div>
+
+    <!-- 分组导航：按话题 / 人物 / 地点 / 情绪，等价于这套系统的四种检索视角 -->
+    <nav id="nav"></nav>
+
+    <p class="legend"><i></i> 记忆片段 <span>●</span> 标签节点 <em>●</em> 有待办</p>
+    <p class="hint">拖动旋转 · 滚动或拉动尺度条 · 点击光点</p>
+    <p class="caption">✦ 一张会呼吸、会生长的记忆地图。</p>
+
+    <a class="back-link" href="/">← 回到对话</a>
+
+    <!-- 详情抽屉：桌面从右侧滑出，手机从底部滑起 -->
+    <aside class="region-drawer" id="detail" aria-hidden="true">
+        <button class="region-close" id="detailClose" type="button" aria-label="关闭详情">×</button>
+        <small id="detailTag">MEMORY</small>
+        <h2 id="detailTitle">记忆</h2>
+        <p class="detail-sub" id="detailSub"></p>
+        <div class="detail-body" id="detailBody"></div>
+    </aside>
+
+    <!-- 空状态 / 未登录提示 -->
+    <div class="empty" id="empty" hidden>
+        <strong>✦</strong>
+        <h2 id="emptyTitle">还没有形成长期记忆</h2>
+        <p id="emptyText">和她多聊几次，一段对话结束后这里就会亮起一颗光点。</p>
+        <a class="empty-link" id="emptyAction" href="/">去聊会儿</a>
+    </div>
+</div>
+
+<script type="module" src="/static/js/brain.js"></script>
+</body>
+</html>

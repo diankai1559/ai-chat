@@ -8,7 +8,7 @@ class HistoryItem(BaseModel):
     segment_id: int | None = None
 
 
-class History(BaseModel):
+class HistoryResponse(BaseModel):
     items: list[HistoryItem]
     has_more: bool
     next_before_id: int | None = None

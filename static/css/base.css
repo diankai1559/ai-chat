@@ -1,0 +1,261 @@
+/* =========================================================
+   base.css — 主题令牌、全局重置与通用控件
+   只放与页面结构无关的样式：配色变量、盒模型、按钮、输入框、弹窗、登录卡片。
+   页面骨架见 layout.css，聊天组件见 chat.css。
+   ========================================================= */
+
+/* ---------- 暖色主题令牌：要改配色只改这里 ---------- */
+:root {
+    --bg: hsl(38, 44%, 94%);           /* 页面底色：米黄 */
+    --bg-deep: hsl(34, 38%, 90%);      /* 底部渐变收口 */
+    --panel: hsl(35, 34%, 89%);        /* 次级面板 */
+    --line: hsl(34, 26%, 81%);         /* 描边 */
+    --txt: hsl(24, 26%, 19%);          /* 正文 */
+    --sub: hsl(28, 14%, 44%);          /* 次要文字 */
+    --accent: hsl(34, 55%, 78%);       /* 暖沙金，主强调色 */
+    --accent-deep: hsl(24, 42%, 48%);  /* 陶土棕，重强调 */
+    --hover: hsl(35, 36%, 85%);        /* 悬停底色 */
+    --field: hsl(40, 62%, 98%);        /* 输入框 / 卡片底色 */
+    --shadow: 0 18px 44px hsla(30, 30%, 42%, 0.13);
+    --ring: 0 0 0 4px hsla(34, 55%, 70%, 0.22);  /* 聚焦光晕 */
+}
+
+/* ---------- 全局重置 ---------- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+/* [hidden] 必须压过任何更具体的 display 规则，否则切换视图会失灵 */
+[hidden] { display: none !important; }
+
+/* 支持动态视口的浏览器用 dvh，避免手机地址栏收起时底部被裁掉 */
+@supports (height: 100dvh) {
+    html, body { height: 100dvh; }
+}
+
+body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background:
+        radial-gradient(1200px 620px at 50% -16%, hsl(40, 60%, 97%), transparent 68%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+    color: var(--txt);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    user-select: none;              /* 默认不选中文本，气泡和输入框再单独放开 */
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 通用表单 ---------- */
+
+/* 一行标签 + 输入框的最小组合，登录卡片和弹窗共用 */
+.field { margin-bottom: 16px; }
+
+.field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--sub);
+    margin-bottom: 7px;
+}
+
+.field input {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    outline: none;
+    user-select: text;
+    transition: border-color .3s ease, box-shadow .3s ease;
+}
+
+.field input::placeholder { color: var(--sub); }
+
+.field input:focus {
+    border-color: hsl(45, 40%, 60%);
+    box-shadow: 0 0 0 3px hsla(48, 50%, 70%, 0.25);
+}
+
+/* ---------- 通用按钮（弹窗里用得到） ---------- */
+.btn {
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: filter .3s ease, background-color .3s ease, color .3s ease;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: hsl(30, 20%, 18%);
+    border-color: transparent;
+}
+.btn-primary:hover { filter: brightness(1.05); }
+
+.btn-ghost { background: transparent; color: var(--sub); }
+.btn-ghost:hover { background: var(--hover); color: var(--txt); }
+
+.btn:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
+/* 「测试」按钮靠左，取消/保存留在右侧 */
+.btn-test { margin-right: auto; }
+
+/* ---------- 弹窗（API Key 配置） ---------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: hsla(35, 25%, 18%, 0.35);
+    animation: fade-in .25s ease;
+}
+
+/* 遮罩淡入 */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 50px hsla(40, 30%, 40%, 0.25);
+    animation: menu-in .25s cubic-bezier(.2,.7,.3,1);  /* 复用 layout.css 的入场动画 */
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+
+.modal-desc {
+    font-size: 12.5px;
+    color: var(--sub);
+    line-height: 1.6;
+    margin: 0 0 18px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+/* 弹窗内的状态提示，默认无内容，靠 ok / err 改颜色 */
+.modal-status {
+    min-height: 16px;
+    font-size: 12.5px;
+    margin: 0 0 4px;
+}
+.modal-status.ok { color: hsl(120, 30%, 38%); }
+.modal-status.err { color: hsl(10, 42%, 52%); }
+
+/* ---------- 登录卡片 ---------- */
+.auth-card {
+    width: 100%;
+    max-width: 380px;
+    background: linear-gradient(180deg, hsl(40, 66%, 99%), var(--field));
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 30px 28px;
+    box-shadow: var(--shadow);
+}
+
+.auth-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(150deg, hsl(42, 74%, 92%), var(--accent));
+    color: hsl(30, 20%, 18%);
+    font-size: 26px;
+    line-height: 52px;
+    text-align: center;
+    margin: 0 auto 18px;
+    box-shadow: 0 10px 24px hsla(30, 42%, 50%, 0.18);
+}
+
+.auth-card h2 {
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    margin: 0 0 6px;
+}
+
+.auth-sub {
+    text-align: center;
+    font-size: 13px;
+    color: var(--sub);
+    margin: 0 0 24px;
+}
+
+/* 登录 / 注册切换：一个滑块式的双按钮 */
+.auth-tabs {
+    display: flex;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 24px;
+}
+
+.auth-tabs button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--sub);
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 7px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color .35s ease, color .35s ease;
+}
+
+.auth-tabs button.active {
+    background: var(--accent);
+    color: hsl(30, 20%, 18%);
+}
+
+.auth-btn {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(145deg, hsl(38, 68%, 82%), var(--accent));
+    color: hsl(30, 20%, 18%);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    padding: 11px 0;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: transform .2s ease, filter .25s ease, box-shadow .25s ease;
+}
+
+.auth-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px hsla(30, 40%, 50%, 0.2);
+}
+
+.auth-btn:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+
+/* 登录失败时的红字提示，留出高度避免卡片跳动 */
+.auth-msg {
+    min-height: 18px;
+    font-size: 12.5px;
+    color: hsl(10, 42%, 52%);
+    text-align: center;
+    margin-top: 14px;
+}

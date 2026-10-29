@@ -11,11 +11,11 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from .config import DB_PATH, DATA_DIR
+from ..config import DB_PATH, DATA_DIR
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-engine = create_engine(f"sqlite:///{DB_PATH.as_posix()}")
+engine = create_engine(f"sqlite:///{DB_PATH.as_posix()}",pool_size=100,max_overflow=100)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 

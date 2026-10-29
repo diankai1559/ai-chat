@@ -15,7 +15,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from app.memory.build import extract_tags
+from app.infrastructure.memory.build import extract_tags
 
 HERE = Path(__file__).resolve().parent
 RESULT_DIR = HERE / "results"
